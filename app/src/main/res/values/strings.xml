@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GymPulse</string>
+    <string name="notification_channel_workout">Séance en cours</string>
+    <string name="notification_channel_workout_description">Suivi de la séance active et du temps de repos</string>
+    <string name="notification_channel_alerts">Fin de repos</string>
+    <string name="notification_channel_alerts_description">Alerte lorsque la série suivante est prête</string>
+</resources>
