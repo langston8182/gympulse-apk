@@ -5,6 +5,7 @@ import com.gympulse.app.data.location.AndroidAddressGeocoder
 import com.gympulse.app.domain.location.AddressGeocoder
 import com.gympulse.app.data.local.db.MIGRATION_2_3
 import com.gympulse.app.data.local.db.MIGRATION_3_4
+import com.gympulse.app.data.local.db.MIGRATION_4_5
 import com.gympulse.app.data.local.db.MIGRATION_1_2
 import com.gympulse.app.data.remote.auth.AccountManager
 import com.gympulse.app.data.remote.auth.CognitoAuth
@@ -86,7 +87,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): GymPulseDatabase =
         Room.databaseBuilder(context, GymPulseDatabase::class.java, GymPulseDatabase.NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
 }
 

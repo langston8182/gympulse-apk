@@ -48,3 +48,10 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         connection.execSQL("ALTER TABLE `locations` ADD COLUMN `address` TEXT NOT NULL DEFAULT ''")
     }
 }
+
+/** 4 → 5: a personal exercise remembers the library exercise it customises. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `exercises` ADD COLUMN `basedOn` TEXT")
+    }
+}

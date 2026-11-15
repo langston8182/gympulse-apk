@@ -51,6 +51,18 @@ object SessionRecommender {
         return SessionCompatibility(session, compatibility, missing)
     }
 
+    /**
+     * Whether a session may be proposed at [location]: it is linked to it, or it is linked to no place at
+     * all and the equipment fits. A session reserved for another place is never proposed here, even if the
+     * equipment would allow it. Without a location nothing is excluded.
+     */
+    fun isEligibleAt(session: WorkoutSession, location: TrainingLocation?): Boolean = when {
+        location == null -> true
+        location.id in session.compatibleLocationIds -> true
+        session.compatibleLocationIds.isNotEmpty() -> false
+        else -> compatibility(session, location).isUsable
+    }
+
     /** Sessions ranked for a location: linked first, then feasible ones, then the others. */
     fun rank(sessions: List<WorkoutSession>, location: TrainingLocation?): List<SessionCompatibility> =
         sessions.map { compatibility(it, location) }
@@ -77,7 +89,7 @@ object SessionRecommender {
         if (location == null) return emptyList()
         val lastPerformed = history.filter { it.sessionId != null }.groupBy { it.sessionId!! }.mapValues { (_, w) -> w.maxOf { it.startedAt } }
         return rank(sessions.filter { s -> s.id != exclude && s.exercises.any { it.sets.isNotEmpty() } }, location)
-            .filter { it.isUsable }
+            .filter { isEligibleAt(it.session, location) }
             .sortedWith(
                 compareBy<SessionCompatibility> { it.session.sortOrder }
                     .thenBy { it.compatibility.rank }
@@ -115,7 +127,7 @@ object SessionRecommender {
             .groupBy { it.sessionId!! }
             .mapValues { (_, workouts) -> workouts.maxOf { it.startedAt } }
 
-        fun usable(session: WorkoutSession) = compatibility(session, location).isUsable
+        fun usable(session: WorkoutSession) = isEligibleAt(session, location)
 
         fun suggestion(session: WorkoutSession, reason: SuggestionReason, program: TrainingProgram? = null) = SessionSuggestion(
             session = session,
@@ -153,7 +165,9 @@ object SessionRecommender {
         }
 
         val ranked = rank(candidates, location)
-        val usableSessions = ranked.filter { it.isUsable }.map { it.session }.ifEmpty { candidates }
+        val usableSessions = ranked.filter { isEligibleAt(it.session, location) }.map { it.session }
+            // A selected place never gets a session reserved for another one; with no place, anything goes.
+            .ifEmpty { if (location == null) candidates else return null }
         val leastRecent = usableSessions.minWithOrNull(
             compareBy<WorkoutSession> { lastPerformed[it.id] ?: Long.MIN_VALUE }
                 .thenBy { compatibility(it, location).compatibility.rank }

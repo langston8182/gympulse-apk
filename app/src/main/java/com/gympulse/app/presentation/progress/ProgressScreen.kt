@@ -35,7 +35,13 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.gympulse.app.presentation.common.shareWorkoutsCsv
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -315,6 +321,8 @@ private fun HistoryTab(state: ProgressState, onOpenWorkout: (Long) -> Unit, onCo
     val unit = LocalWeightUnit.current
     var compareMode by rememberSaveable { mutableStateOf(false) }
     val selected = remember { mutableStateListOf<Long>() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val grouped = remember(state.history) {
         state.history.groupBy {
             val date = Instant.ofEpochMilli(it.execution.startedAt).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -334,6 +342,12 @@ private fun HistoryTab(state: ProgressState, onOpenWorkout: (Long) -> Unit, onCo
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
+                    AssistChip(
+                        onClick = { scope.launch { shareWorkoutsCsv(context, state.history.map { it.execution }) } },
+                        label = { Text("Exporter") },
+                        leadingIcon = { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) },
+                    )
+                    Spacer(Modifier.width(8.dp))
                     FilterChip(
                         selected = compareMode,
                         onClick = {

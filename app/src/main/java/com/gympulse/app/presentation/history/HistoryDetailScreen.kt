@@ -30,7 +30,12 @@ import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.gympulse.app.presentation.common.shareWorkoutsCsv
+import kotlinx.coroutines.launch
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -87,6 +92,8 @@ fun HistoryDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var showCompare by remember { mutableStateOf(false) }
     val execution = state.execution
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -99,6 +106,9 @@ fun HistoryDetailScreen(
                             IconButton(onClick = { showCompare = true }) {
                                 Icon(Icons.AutoMirrored.Rounded.CompareArrows, contentDescription = "Comparer avec une autre séance")
                             }
+                        }
+                        IconButton(onClick = { scope.launch { shareWorkoutsCsv(context, listOf(execution)) } }) {
+                            Icon(Icons.Rounded.Share, contentDescription = "Exporter et partager cette séance")
                         }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.Delete, contentDescription = "Supprimer cette séance") }
                     }

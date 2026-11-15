@@ -74,7 +74,11 @@ class ExerciseEditViewModel @Inject constructor(
                     return@launch
                 }
                 // A catalogue exercise is read-only: editing it creates the user's own copy.
-                original = if (exercise.isLibrary) exercise.copy(id = 0, isLibrary = false, createdAt = 0) else exercise
+                original = if (exercise.isLibrary) {
+                    exercise.copy(id = 0, isLibrary = false, createdAt = 0, libraryKey = null, basedOnKey = exercise.libraryKey)
+                } else {
+                    exercise
+                }
                 val form = ExerciseForm(
                     name = exercise.name,
                     type = exercise.type,

@@ -137,26 +137,40 @@ class LocalLocationRepository @Inject constructor(
             val prefs = preferences.preferences.first()
             if (!prefs.autoDetectLocation || prefs.manualLocationId != null) return
             val current = detection.value
-            val isFresh = time.now() - current.at < DETECTION_TTL_MS &&
-                current.status in setOf(DetectionStatus.MATCHED, DetectionStatus.NO_MATCH)
-            if (isFresh) return
-            if (!deviceLocation.hasPermission()) {
-                detection.value = Detection(DetectionStatus.PERMISSION_DENIED, at = time.now())
-                return
-            }
-            detection.value = current.copy(status = DetectionStatus.DETECTING)
-            val position = deviceLocation.currentPosition()
-            if (position == null) {
-                detection.value = Detection(DetectionStatus.UNAVAILABLE, at = time.now())
-                return
-            }
-            val locations = dao.getAll().map { it.toDomain() }
-            val match = LocationMatcher.match(position, locations)
-            detection.value = if (match != null) {
-                Detection(DetectionStatus.MATCHED, match.location.id, match.distanceMeters, time.now())
-            } else {
-                Detection(DetectionStatus.NO_MATCH, at = time.now())
-            }
+            if (isFresh(current)) return
+            detection.value = locate(current)
+        }
+    }
+
+    /**
+     * Run every time the app is opened: the detected place wins over a manual choice made earlier, so the
+     * home screen always starts with the sessions of where the user actually is. When nothing matches
+     * (no permission, no position, unknown place) the manual choice, if any, is kept.
+     */
+    override suspend fun detectOnAppOpen() {
+        detectionMutex.withLock {
+            val prefs = preferences.preferences.first()
+            if (!prefs.autoDetectLocation) return
+            val current = detection.value
+            if (isFresh(current)) return
+            val result = locate(current)
+            detection.value = result
+            if (result.status == DetectionStatus.MATCHED && prefs.manualLocationId != null) preferences.setManualLocationId(null)
+        }
+    }
+
+    private fun isFresh(current: Detection) = time.now() - current.at < DETECTION_TTL_MS &&
+        current.status in setOf(DetectionStatus.MATCHED, DetectionStatus.NO_MATCH)
+
+    private suspend fun locate(current: Detection): Detection {
+        if (!deviceLocation.hasPermission()) return Detection(DetectionStatus.PERMISSION_DENIED, at = time.now())
+        detection.value = current.copy(status = DetectionStatus.DETECTING)
+        val position = deviceLocation.currentPosition() ?: return Detection(DetectionStatus.UNAVAILABLE, at = time.now())
+        val match = LocationMatcher.match(position, dao.getAll().map { it.toDomain() })
+        return if (match != null) {
+            Detection(DetectionStatus.MATCHED, match.location.id, match.distanceMeters, time.now())
+        } else {
+            Detection(DetectionStatus.NO_MATCH, at = time.now())
         }
     }
 

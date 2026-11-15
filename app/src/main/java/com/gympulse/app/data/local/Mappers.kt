@@ -33,6 +33,8 @@ fun ExerciseEntity.toDomain() = Exercise(
     loadMode = loadMode,
     createdAt = createdAt,
     isLibrary = isLibrary,
+    libraryKey = remoteRef.takeIf { isLibrary },
+    basedOnKey = basedOn,
 )
 
 fun Exercise.toEntity() = ExerciseEntity(
@@ -46,6 +48,7 @@ fun Exercise.toEntity() = ExerciseEntity(
     loadMode = loadMode,
     createdAt = createdAt,
     isLibrary = isLibrary,
+    basedOn = basedOnKey,
 )
 
 fun LocationEntity.toDomain() = TrainingLocation(

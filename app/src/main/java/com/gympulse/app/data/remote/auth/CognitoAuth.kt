@@ -58,6 +58,9 @@ class CognitoAuth @Inject constructor(
         val config = AuthorizationServiceConfiguration(Uri.parse("https://$domain/oauth2/authorize"), Uri.parse("https://$domain/oauth2/token"))
         val request = AuthorizationRequest.Builder(config, BuildConfig.COGNITO_CLIENT_ID, ResponseTypeValues.CODE, Uri.parse(REDIRECT_URI))
             .setScope("openid email profile")
+            // select_account: Google always offers the account chooser (the hosted login keeps its own browser session).
+            // AppAuth rejects "prompt" as a free-form parameter: it has its own setter.
+            .setPrompt(AuthorizationRequest.Prompt.SELECT_ACCOUNT)
             .setAdditionalParameters(mapOf("identity_provider" to "Google"))
             .build()
         return service.getAuthorizationRequestIntent(request)

@@ -16,12 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import com.gympulse.app.core.designsystem.components.dragHandle
+import com.gympulse.app.core.designsystem.components.ReorderableListState
 import com.gympulse.app.core.designsystem.components.rememberReorderableListState
 import com.gympulse.app.core.designsystem.components.reorderableItem
 import com.gympulse.app.domain.model.WorkoutSession
@@ -48,10 +53,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -165,7 +168,7 @@ private fun SessionsList(
                     }
                 }
             }
-            if (state.recommended.isEmpty() && state.others.isEmpty()) {
+            if (state.groups.isEmpty()) {
                 item(key = "empty-filter") {
                     EmptyState(
                         icon = Icons.Rounded.FilterAltOff,
@@ -176,42 +179,21 @@ private fun SessionsList(
                     )
                 }
             }
-            if (state.recommended.isNotEmpty()) {
-                item(key = "recommended-header") {
+            state.groups.forEach { group ->
+                item(key = "header-${group.key}") {
                     SectionHeader(
-                        "Recommandées ici",
-                        subtitle = "Réalisables avec le matériel de « ${state.location.location?.name} »",
+                        group.title,
+                        subtitle = if (group.isCurrent) "Lieu actuel · ${group.sessions.size} séance(s)" else "${group.sessions.size} séance(s)",
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
-                items(state.recommended, key = { "r-${it.session.id}" }) { item ->
+                items(group.sessions, key = { "${group.key}-${it.id}" }) { session ->
                     SessionCard(
-                        session = item.session,
-                        onClick = { onOpenSession(item.session.id) },
-                        compatibility = item.compatibility.compatibility,
-                        lastPerformedAt = item.lastPerformedAt,
-                        onStart = { onStartWorkout(item.session.id) },
-                        onToggleFavorite = { onToggleFavorite(item.session) },
-                        modifier = Modifier.animateItem(),
-                    )
-                }
-            }
-            if (state.others.isNotEmpty()) {
-                item(key = "others-header") {
-                    SectionHeader(
-                        if (state.recommended.isEmpty()) "Toutes les séances" else "Autres séances",
-                        subtitle = if (state.location.location != null) "Du matériel peut manquer à cet endroit" else null,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-                items(state.others, key = { "o-${it.session.id}" }) { item ->
-                    SessionCard(
-                        session = item.session,
-                        onClick = { onOpenSession(item.session.id) },
-                        compatibility = item.compatibility.compatibility.takeIf { it == Compatibility.INCOMPATIBLE },
-                        lastPerformedAt = item.lastPerformedAt,
-                        onStart = { onStartWorkout(item.session.id) },
-                        onToggleFavorite = { onToggleFavorite(item.session) },
+                        session = session,
+                        onClick = { onOpenSession(session.id) },
+                        lastPerformedAt = state.lastPerformed[session.id],
+                        onStart = { onStartWorkout(session.id) },
+                        onToggleFavorite = { onToggleFavorite(session) },
                         modifier = Modifier.animateItem(),
                     )
                 }
@@ -221,24 +203,61 @@ private fun SessionsList(
     }
 }
 
+/** A row of the reorder screen: a place header, or a session of that place. */
+private sealed interface ReorderRow {
+    val key: String
+
+    data class Header(val group: SessionGroup) : ReorderRow {
+        override val key = "order-header-${group.key}"
+    }
+
+    data class Item(val groupKey: String, val session: WorkoutSession) : ReorderRow {
+        override val key = "order-${groupKey}-${session.id}"
+    }
+}
+
+private fun rowsOf(groups: List<SessionGroup>): List<ReorderRow> =
+    groups.flatMap { group -> listOf<ReorderRow>(ReorderRow.Header(group)) + group.sessions.map { ReorderRow.Item(group.key, it) } }
+
 /**
- * Flat list of every session in the user's order. Drag the handle to move a session; the new
- * order is saved when the finger is released. Screen readers get "move up / down" actions.
+ * Every session, grouped by place, in the user's order. Drag the handle to move a session within its
+ * place; the new order is saved when the finger is released (the sessions of the other places keep their
+ * slots). Screen readers get "move up / down" actions.
  */
 @Composable
 private fun ReorderList(state: SessionsState, onDone: () -> Unit, onSaveOrder: (List<Long>) -> Unit) {
-    val order = remember(state.ordered) { mutableStateListOf<WorkoutSession>().apply { addAll(state.ordered) } }
+    val rows = remember(state.reorderGroups) { mutableStateListOf<ReorderRow>().apply { addAll(rowsOf(state.reorderGroups)) } }
     val listState = rememberLazyListState()
-    fun move(from: Int, to: Int) {
-        if (from in order.indices && to in order.indices) order.add(to, order.removeAt(from))
+    val holder = remember { arrayOfNulls<ReorderableListState>(1) }
+
+    fun groupKeyOf(key: Any?): String? = (rows.firstOrNull { it.key == key } as? ReorderRow.Item)?.groupKey
+
+    fun save(groupKey: String) {
+        val groupOrder = rows.filterIsInstance<ReorderRow.Item>().filter { it.groupKey == groupKey }.map { it.session.id }
+        onSaveOrder(mergeGroupOrder(state.ordered.map { it.id }, groupOrder))
     }
-    // Index 0 of the lazy list is the header.
+
+    fun swap(from: Int, to: Int) {
+        if (from in rows.indices && to in rows.indices) rows.add(to, rows.removeAt(from))
+    }
+
+    // Index 0 of the lazy list is the screen header.
     val reorder = rememberReorderableListState(
         listState,
-        onMove = { from, to -> move(from - 1, to - 1) },
-        canMoveOver = { key -> key != HEADER_KEY },
-        onDragFinished = { onSaveOrder(order.map { it.id }) },
+        onMove = { from, to -> swap(from - 1, to - 1) },
+        // A session only moves among the sessions of its own place.
+        canMoveOver = { key -> groupKeyOf(key) != null && groupKeyOf(key) == groupKeyOf(holder[0]?.draggingKey) },
+        onDragFinished = { },
     )
+    holder[0] = reorder
+    var draggedGroup by remember { mutableStateOf<String?>(null) }
+    // Saved when the drag ends: the dragged key is cleared by then, so it is remembered here.
+    val currentDragKey = reorder.draggingKey
+    if (currentDragKey != null) draggedGroup = groupKeyOf(currentDragKey)
+    LaunchedEffect(currentDragKey) {
+        if (currentDragKey == null) draggedGroup?.let { save(it); draggedGroup = null }
+    }
+
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 96.dp),
@@ -249,7 +268,7 @@ private fun ReorderList(state: SessionsState, onDone: () -> Unit, onSaveOrder: (
                 Column(Modifier.weight(1f)) {
                     Text("Ordre des séances", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Maintenez la poignée et glissez. Cet ordre est repris sur l'accueil.",
+                        "Maintenez la poignée et glissez, lieu par lieu. Cet ordre est repris sur l'accueil.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -257,30 +276,49 @@ private fun ReorderList(state: SessionsState, onDone: () -> Unit, onSaveOrder: (
                 Button(onClick = onDone) { Text("Terminé") }
             }
         }
-        itemsIndexed(order, key = { _, session -> session.id }) { index, session ->
-            EvoCard(
-                modifier = Modifier
-                    .reorderableItem(reorder, session.id)
-                    .semantics {
-                        customActions = listOf(
-                            CustomAccessibilityAction("Monter") { move(index, index - 1).also { onSaveOrder(order.map { s -> s.id }) }; index > 0 },
-                            CustomAccessibilityAction("Descendre") { move(index, index + 1).also { onSaveOrder(order.map { s -> s.id }) }; index < order.lastIndex },
-                        )
-                    },
-                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 4.dp, bottom = 8.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(28.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(session.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        GoalBadge(session.trainingGoal)
+        items(rows, key = { it.key }) { row ->
+            when (row) {
+                is ReorderRow.Header -> SectionHeader(
+                    row.group.title,
+                    subtitle = if (row.group.isCurrent) "Lieu actuel" else null,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                is ReorderRow.Item -> {
+                    val siblings = rows.filterIsInstance<ReorderRow.Item>().filter { it.groupKey == row.groupKey }
+                    val index = siblings.indexOf(row)
+                    EvoCard(
+                        modifier = Modifier
+                            .reorderableItem(reorder, row.key)
+                            .semantics {
+                                customActions = listOf(
+                                    CustomAccessibilityAction("Monter") {
+                                        val at = rows.indexOf(row)
+                                        if (index > 0) { swap(at, rows.indexOf(siblings[index - 1])); save(row.groupKey) }
+                                        index > 0
+                                    },
+                                    CustomAccessibilityAction("Descendre") {
+                                        val at = rows.indexOf(row)
+                                        if (index < siblings.lastIndex) { swap(at, rows.indexOf(siblings[index + 1])); save(row.groupKey) }
+                                        index < siblings.lastIndex
+                                    },
+                                )
+                            },
+                        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 4.dp, bottom = 8.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${index + 1}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(28.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(row.session.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                GoalBadge(row.session.trainingGoal)
+                            }
+                            Icon(
+                                Icons.Rounded.DragHandle,
+                                contentDescription = "Déplacer ${row.session.name}",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(48.dp).padding(12.dp).dragHandle(reorder, row.key),
+                            )
+                        }
                     }
-                    Icon(
-                        Icons.Rounded.DragHandle,
-                        contentDescription = "Déplacer ${session.name}",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(48.dp).padding(12.dp).dragHandle(reorder, session.id),
-                    )
                 }
             }
         }

@@ -15,7 +15,10 @@ import com.gympulse.app.domain.model.WorkoutSession
 import com.gympulse.app.testing.TestData
 import com.gympulse.app.testing.TestData.DAY
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocationMatcherTest {
@@ -115,22 +118,36 @@ class SessionRecommenderTest {
 
     @Test
     fun `falls back to the least recently performed usable session`() {
+        val free = session(5, "Libre", TestData.benchDumbbell) // linked to no place: only the equipment matters
         val history = listOf(
             TestData.completedWorkout(1, 10 * DAY, emptyList(), sessionId = homeCore.id),
             TestData.completedWorkout(2, 5 * DAY, emptyList(), sessionId = 99),
         )
-        val suggestion = SessionRecommender.suggest(listOf(homeCore, push), emptyList(), history, home)!!
-        assertEquals(push.id, suggestion.session.id)
+        val suggestion = SessionRecommender.suggest(listOf(homeCore, free), emptyList(), history, home)!!
+        assertEquals(free.id, suggestion.session.id)
         assertEquals(SuggestionReason.LEAST_RECENT, suggestion.reason)
     }
 
     @Test
-    fun `alternatives list linked sessions then those the equipment allows, without the main one`() {
-        val all = listOf(push, pull, legs, homeCore)
+    fun `a session reserved for another place is never suggested at the selected one`() {
+        // push is linked to the gym only: the dumbbells and bench at home would allow it, but it is not for home.
+        assertEquals(homeCore.id, SessionRecommender.suggest(listOf(push, homeCore), emptyList(), emptyList(), home)!!.session.id)
+        assertNull(SessionRecommender.suggest(listOf(push, pull, legs), emptyList(), emptyList(), home))
+        assertFalse(SessionRecommender.isEligibleAt(push, home))
+        assertTrue(SessionRecommender.isEligibleAt(push, gym))
+        // Without a selected place nothing is excluded.
+        assertTrue(SessionRecommender.isEligibleAt(push, null))
+        assertNotNull(SessionRecommender.suggest(listOf(push), emptyList(), emptyList(), null))
+    }
+
+    @Test
+    fun `alternatives list the sessions of the place then unlinked ones the equipment allows, without the main one`() {
+        val free = session(5, "Libre", TestData.benchDumbbell)
+        val all = listOf(push, pull, legs, homeCore, free)
         val alternatives = SessionRecommender.alternatives(all, emptyList(), home, exclude = null)
-        assertEquals(listOf(homeCore.id, push.id), alternatives.map { it.session.id })
+        assertEquals(listOf(homeCore.id, free.id), alternatives.map { it.session.id })
         assertEquals(listOf(SuggestionReason.LOCATION_MATCH, SuggestionReason.EQUIPMENT_MATCH), alternatives.map { it.reason })
-        assertEquals(listOf(push.id), SessionRecommender.alternatives(all, emptyList(), home, exclude = homeCore.id).map { it.session.id })
+        assertEquals(listOf(free.id), SessionRecommender.alternatives(all, emptyList(), home, exclude = homeCore.id).map { it.session.id })
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.gympulse.app.presentation.app
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +23,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -110,6 +114,7 @@ import com.gympulse.app.core.navigation.ProgressRoute
 import com.gympulse.app.core.navigation.SessionDetailRoute
 import com.gympulse.app.core.navigation.SessionEditRoute
 import com.gympulse.app.core.navigation.SessionsRoute
+import com.gympulse.app.core.navigation.HelpRoute
 import com.gympulse.app.core.navigation.SettingsRoute
 import com.gympulse.app.core.navigation.WorkoutRoute
 import com.gympulse.app.core.navigation.WorkoutSummaryRoute
@@ -123,6 +128,7 @@ import com.gympulse.app.presentation.history.HistoryDetailScreen
 import com.gympulse.app.presentation.home.HomeScreen
 import com.gympulse.app.presentation.locations.LocationEditScreen
 import com.gympulse.app.presentation.locations.LocationsScreen
+import com.gympulse.app.presentation.help.HelpScreen
 import com.gympulse.app.presentation.login.LoginScreen
 import com.gympulse.app.presentation.onboarding.OnboardingScreen
 import com.gympulse.app.presentation.profile.ProfileScreen
@@ -190,6 +196,19 @@ fun GymPulseApp(
         if (pendingStartId != 0L) appViewModel.startWorkout(pendingStartId)
         pendingStartId = 0L
     }
+    // Ask once, right after the onboarding, for the position used to detect the training place.
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        appViewModel.onAppOpened()
+    }
+    LaunchedEffect(state.preferences.onboardingCompleted, state.preferences.autoDetectLocation) {
+        val flags = context.getSharedPreferences("gympulse_flags", Context.MODE_PRIVATE)
+        if (state.preferences.onboardingCompleted && state.preferences.autoDetectLocation &&
+            !appViewModel.hasLocationPermission() && !flags.getBoolean("location_permission_asked", false)
+        ) {
+            flags.edit().putBoolean("location_permission_asked", true).apply()
+            locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        }
+    }
     val startWorkout: (Long) -> Unit = { sessionId ->
         val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -221,11 +240,15 @@ fun GymPulseApp(
         LocalWeightUnit provides state.preferences.weightUnit,
         LocalHapticsEnabled provides state.preferences.vibrationEnabled,
     ) {
+        // Edge-to-edge windows do not resize for the keyboard: lift the whole screen above it so the
+        // field being edited stays visible, and give the room back by hiding the bottom bar meanwhile.
+        val keyboardVisible = WindowInsets.isImeVisible
         Scaffold(
+            modifier = Modifier.imePadding(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 AnimatedVisibility(
-                    visible = currentTopLevel != null,
+                    visible = currentTopLevel != null && !keyboardVisible,
                     enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                     exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
                 ) {
@@ -315,6 +338,7 @@ fun GymPulseApp(
                         onOpenLocations = { navController.navigate(LocationsRoute) },
                         onOpenEquipment = { navController.navigate(EquipmentRoute) },
                         onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onOpenHelp = { navController.navigate(HelpRoute) },
                         onOpenProgress = { navController.navigateTopLevel(TopLevelDestination.PROGRESS) },
                     )
                 }
@@ -426,6 +450,9 @@ fun GymPulseApp(
                         onBack = { navController.popBackStack() },
                         onOpenLocation = { navController.navigate(LocationEditRoute(it)) },
                     )
+                }
+                composable<HelpRoute> {
+                    HelpScreen(onBack = { navController.popBackStack() })
                 }
                 composable<SettingsRoute> {
                     SettingsScreen(

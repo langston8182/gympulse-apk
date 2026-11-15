@@ -55,6 +55,7 @@ internal fun ExerciseEntity.toDto() = ExerciseDto(
     loadMode = loadMode.name,
     imageUri = portableImage(imageUri),
     notes = notes,
+    basedOn = basedOn,
 )
 
 internal fun ExerciseDto.toEntity(existing: ExerciseEntity?, library: Boolean, now: Long) = ExerciseEntity(
@@ -69,6 +70,7 @@ internal fun ExerciseDto.toEntity(existing: ExerciseEntity?, library: Boolean, n
     createdAt = existing?.createdAt ?: now,
     remoteRef = ref,
     isLibrary = library,
+    basedOn = basedOn,
 )
 
 // --- Locations -------------------------------------------------------------------------------

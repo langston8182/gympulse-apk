@@ -53,7 +53,11 @@ class FakeWorkoutRepository : WorkoutRepository {
     }
 }
 
-private class FakeSessionRepository(private val sessions: List<WorkoutSession>) : SessionRepository {
+internal class FakeSessionRepository(private val sessions: List<WorkoutSession>) : SessionRepository {
+    val movedToEnd = mutableListOf<Long>()
+    override suspend fun moveSessionToEnd(id: Long) {
+        movedToEnd += id
+    }
     override fun observeSessions() = MutableStateFlow(sessions)
     override fun observeSession(id: Long) = MutableStateFlow(sessions.firstOrNull { it.id == id })
     override suspend fun getSession(id: Long) = sessions.firstOrNull { it.id == id }
@@ -78,9 +82,10 @@ class ActiveWorkoutManagerTest {
     private fun TestScope.manager(
         repository: FakeWorkoutRepository = FakeWorkoutRepository(),
         feedback: RecordingFeedback = RecordingFeedback(),
+        sessions: FakeSessionRepository = FakeSessionRepository(listOf(TestData.session(id = 10))),
     ) = ActiveWorkoutManager(
         workoutRepository = repository,
-        sessionRepository = FakeSessionRepository(listOf(TestData.session(id = 10))),
+        sessionRepository = sessions,
         time = { base + testScheduler.currentTime },
         feedback = feedback,
         scope = backgroundScope,
@@ -194,6 +199,23 @@ class ActiveWorkoutManagerTest {
         assertEquals("Bonne séance", stored.notes)
         assertNotNull(stored.endedAt)
         assertNull(repository.getActiveExecution())
+    }
+
+    @Test
+    fun `finishing sends the session to the end of the order but abandoning does not`() = runTest {
+        val sessions = FakeSessionRepository(listOf(TestData.session(id = 10)))
+        val manager = manager(sessions = sessions)
+        runCurrent()
+        manager.start(10, null)
+        manager.completeSet(12, 20.0, null)
+        runCurrent()
+        manager.finish(null)
+        assertEquals(listOf(10L), sessions.movedToEnd)
+
+        manager.start(10, null)
+        runCurrent()
+        manager.cancel()
+        assertEquals(listOf(10L), sessions.movedToEnd)
     }
 
     @Test

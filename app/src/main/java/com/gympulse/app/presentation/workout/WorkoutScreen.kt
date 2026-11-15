@@ -149,7 +149,8 @@ private fun WorkoutContent(
             if (event == WorkoutEvent.RestFinished) restJustFinished = true
         }
     }
-    LaunchedEffect(execution.rest) { if (execution.rest == null) restJustFinished = false }
+    // A new rest (different start) can replace the previous one without passing through null.
+    LaunchedEffect(execution.rest?.startedAt) { restJustFinished = false }
 
     val exercise = execution.currentExercise
     val set = execution.currentSet

@@ -50,8 +50,12 @@ class LocalExerciseRepository @Inject constructor(
 ) : ExerciseRepository {
     private val dao = db.exerciseDao()
 
+    /** Library exercises that have a personal copy are hidden, so nothing appears twice. */
     override fun observeExercises(): Flow<List<Exercise>> =
-        dao.observeAll().map { list -> list.map { it.toDomain() } }.flowOn(dispatcher)
+        dao.observeAll().map { list ->
+            val customised = list.mapNotNull { if (it.isLibrary) null else it.basedOn }.toSet()
+            list.filterNot { it.isLibrary && it.remoteRef in customised }.map { it.toDomain() }
+        }.flowOn(dispatcher)
 
     override fun observeExercise(id: Long): Flow<Exercise?> = dao.observe(id).map { it?.toDomain() }
 
@@ -65,6 +69,15 @@ class LocalExerciseRepository @Inject constructor(
         val id = db.withTransaction {
             val saved = if (entity.id == 0L) dao.insert(entity) else entity.id.also { dao.upsert(entity) }
             outbox.upsert(SyncEntity.EXERCISE, saved)
+            // A new personal copy of a library exercise takes the place of the original in the user's sessions.
+            if (entity.id == 0L && entity.basedOn != null) {
+                dao.libraryByKey(entity.basedOn)?.let { original ->
+                    val sessionDao = db.sessionDao()
+                    val affected = sessionDao.sessionIdsUsingExercise(original.id)
+                    sessionDao.replaceExercise(original.id, saved)
+                    affected.forEach { outbox.upsert(SyncEntity.SESSION, it) }
+                }
+            }
             saved
         }
         outbox.requestSync()
@@ -146,6 +159,18 @@ class LocalSessionRepository @Inject constructor(
                     outbox.upsert(SyncEntity.SESSION, id)
                 }
             }
+        }
+        outbox.requestSync()
+    }
+
+    override suspend fun moveSessionToEnd(id: Long) {
+        db.withTransaction {
+            val current = dao.getEntity(id) ?: return@withTransaction
+            val last = dao.maxSortOrder()
+            // Already last: nothing to do (keeps the numbers from growing for nothing).
+            if (current.sortOrder == last && dao.getAllEntities().count { it.sortOrder == last } == 1) return@withTransaction
+            dao.setSortOrder(id, last + 1)
+            outbox.upsert(SyncEntity.SESSION, id)
         }
         outbox.requestSync()
     }

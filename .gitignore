@@ -11,3 +11,8 @@
 .cxx/
 *.apk
 *.aab
+
+# Signing keys and credentials: never commit
+*.jks
+*.keystore
+keystore.properties

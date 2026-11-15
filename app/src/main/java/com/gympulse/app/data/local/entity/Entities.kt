@@ -32,6 +32,8 @@ data class ExerciseEntity(
     val remoteRef: String? = null,
     /** Provided by the server library: shared, read-only, never pushed. */
     @ColumnInfo(defaultValue = "0") val isLibrary: Boolean = false,
+    /** Key of the library exercise this personal exercise is a copy of. */
+    val basedOn: String? = null,
 )
 
 @Entity(tableName = "locations", indices = [Index("remoteRef", unique = true)])

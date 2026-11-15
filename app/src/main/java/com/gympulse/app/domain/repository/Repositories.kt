@@ -38,6 +38,9 @@ interface SessionRepository {
 
     /** Stores the order chosen by the user: the session at index 0 comes first everywhere. */
     suspend fun reorderSessions(orderedIds: List<Long>)
+
+    /** Puts a session at the end of the order: used after it was performed, so the next one comes first. */
+    suspend fun moveSessionToEnd(id: Long)
 }
 
 interface ProgramRepository {
@@ -88,6 +91,9 @@ interface LocationRepository {
     suspend fun linkPrograms(locationId: Long, programIds: Set<Long>)
     /** Detects the current place with the device position, if the permission is granted. */
     suspend fun refreshDetection()
+
+    /** Detection made each time the app opens: a detected place replaces a previous manual choice. */
+    suspend fun detectOnAppOpen()
     suspend fun selectManually(locationId: Long?)
     suspend fun enableAutoDetection()
     suspend fun currentPosition(): GeoPoint?

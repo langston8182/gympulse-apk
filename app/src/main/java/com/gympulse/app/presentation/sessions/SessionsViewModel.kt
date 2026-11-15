@@ -2,9 +2,6 @@ package com.gympulse.app.presentation.sessions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gympulse.app.domain.location.Compatibility
-import com.gympulse.app.domain.location.SessionCompatibility
-import com.gympulse.app.domain.location.SessionRecommender
 import com.gympulse.app.domain.model.LocationContext
 import com.gympulse.app.domain.model.TrainingGoal
 import com.gympulse.app.domain.model.WorkoutSession
@@ -38,18 +35,16 @@ enum class SessionFilter(val label: String) {
     }
 }
 
-data class SessionItem(val compatibility: SessionCompatibility, val lastPerformedAt: Long?) {
-    val session: WorkoutSession get() = compatibility.session
-}
-
 data class SessionsState(
     val loading: Boolean = true,
     val location: LocationContext = LocationContext(),
-    val recommended: List<SessionItem> = emptyList(),
-    val others: List<SessionItem> = emptyList(),
+    /** Sessions matching the filter, grouped by training place. */
+    val groups: List<SessionGroup> = emptyList(),
+    val lastPerformed: Map<Long, Long> = emptyMap(),
     val filter: SessionFilter = SessionFilter.ALL,
     val totalCount: Int = 0,
-    /** All the sessions in the user's order, shown while reordering. */
+    /** All the sessions in the user's order, grouped by place, shown while reordering. */
+    val reorderGroups: List<SessionGroup> = emptyList(),
     val ordered: List<WorkoutSession> = emptyList(),
     val reordering: Boolean = false,
 )
@@ -68,29 +63,26 @@ class SessionsViewModel @Inject constructor(
         .map { history -> history.filter { it.sessionId != null }.groupBy { it.sessionId!! }.mapValues { (_, list) -> list.maxOf { it.startedAt } } }
         .onStart { emit(emptyMap()) }
 
+    private val catalog = combine(sessionRepository.observeSessions(), locationRepository.observeLocations()) { sessions, locations -> sessions to locations }
+
     val state: StateFlow<SessionsState> = combine(
-        sessionRepository.observeSessions(),
+        catalog,
         lastPerformed,
         locationRepository.context,
         filter,
         reordering,
-    ) { sessions, last, context, filter, reordering ->
-        val ranked = SessionRecommender.rank(sessions.filter(filter::accepts), context.location)
-            .map { SessionItem(it, last[it.session.id]) }
-        val (recommended, others) = if (context.location != null) {
-            ranked.partition { it.compatibility.compatibility == Compatibility.LINKED || it.compatibility.compatibility == Compatibility.EQUIPMENT_MATCH }
-                .let { (fits, rest) -> fits.sortedBy { it.session.sortOrder } to rest }
-        } else {
-            emptyList<SessionItem>() to ranked
-        }
+    ) { (sessions, locations), last, context, filter, reordering ->
+        val ordered = sessions.sortedWith(compareBy({ it.sortOrder }, { it.createdAt }, { it.id }))
+        val currentId = context.location?.id
         SessionsState(
             loading = false,
             location = context,
-            recommended = recommended,
-            others = others,
+            groups = groupSessionsByLocation(ordered.filter(filter::accepts), locations, currentId),
+            lastPerformed = last,
             filter = filter,
             totalCount = sessions.size,
-            ordered = sessions.sortedWith(compareBy({ it.sortOrder }, { it.createdAt }, { it.id })),
+            reorderGroups = groupSessionsByLocation(ordered, locations, currentId),
+            ordered = ordered,
             reordering = reordering,
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionsState())

@@ -173,6 +173,9 @@ class LocationEditViewModel @Inject constructor(
         }
     }
 
+    /** Position chosen by touching the map. */
+    fun pickOnMap(latitude: Double, longitude: Double) = edit { it.copy(latitude = format(latitude), longitude = format(longitude)) }
+
     fun setLatitude(value: String) = edit { it.copy(latitude = value) }
     fun setLongitude(value: String) = edit { it.copy(longitude = value) }
     fun setRadius(value: Int) = edit { it.copy(radiusMeters = value) }

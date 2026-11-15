@@ -21,6 +21,10 @@ val localProperties: Properties = Properties().apply {
 }
 val debugUsesCognito: Boolean = localProperties.getProperty("gympulse.useCognito", "false").trim().toBoolean()
 
+// Release signing: set these four properties in local.properties (never committed). Without them the
+// release build is produced unsigned, which is enough to check that it compiles.
+val releaseStoreFile: String? = localProperties.getProperty("gympulse.release.storeFile")?.trim()?.takeIf { it.isNotEmpty() }
+
 android {
     namespace = "com.gympulse.app"
     compileSdk = 37
@@ -29,8 +33,8 @@ android {
         applicationId = "com.gympulse.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         // Custom scheme of the Cognito redirect (gympulse://auth/callback), handled by AppAuth.
         manifestPlaceholders["appAuthRedirectScheme"] = "gympulse"
@@ -38,6 +42,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = localProperties.getProperty("gympulse.release.storePassword")
+                keyAlias = localProperties.getProperty("gympulse.release.keyAlias")
+                keyPassword = localProperties.getProperty("gympulse.release.keyPassword")
+            }
         }
     }
 
@@ -58,9 +73,10 @@ android {
             buildConfigField("String", "API_ENV", "\"prod\"")
             buildConfigField("boolean", "USE_DEV_USER_HEADER", "false")
             buildConfigField("String", "DEV_USER_ID", "\"\"")
-            // TODO(prod): fill in with the production Cognito pool (domain without scheme, and client id).
-            buildConfigField("String", "COGNITO_DOMAIN", "\"\"")
-            buildConfigField("String", "COGNITO_CLIENT_ID", "\"\"")
+            // Production Cognito pool (public identifiers, not secrets).
+            buildConfigField("String", "COGNITO_DOMAIN", "\"eu-west-3ownbhrzcn.auth.eu-west-3.amazoncognito.com\"")
+            buildConfigField("String", "COGNITO_CLIENT_ID", "\"7stqfkerbqboff8q2khp4cskr1\"")
+            if (releaseStoreFile != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -152,6 +168,7 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.appauth)
+    implementation(libs.osmdroid)
     implementation(libs.androidx.work.runtime.ktx)
 
     testImplementation(libs.junit)

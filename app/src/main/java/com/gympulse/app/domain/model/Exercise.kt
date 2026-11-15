@@ -48,6 +48,10 @@ data class Exercise(
     val createdAt: Long = 0,
     /** Shared catalogue entry: read-only, to be duplicated to be customised. */
     val isLibrary: Boolean = false,
+    /** For a library exercise: its key on the server. */
+    val libraryKey: String? = null,
+    /** For a personal copy: the key of the library exercise it customises (that one is then hidden). */
+    val basedOnKey: String? = null,
 ) {
     val primaryMuscle: MuscleGroup? get() = muscleGroups.firstOrNull()
     val isTimed: Boolean get() = type == ExerciseType.DURATION

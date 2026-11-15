@@ -141,6 +141,15 @@ fun HomeScreen(
                             onAction = onCreateSession,
                         )
                     }
+                    state.suggestions.isEmpty() && state.location.location != null -> EvoCard {
+                        EmptyState(
+                            icon = Icons.Rounded.FitnessCenter,
+                            title = "Aucune séance pour ce lieu",
+                            message = "Aucune de vos séances n'est associée à « ${state.location.location?.name} ». Associez-en une à ce lieu, ou changez de lieu.",
+                            actionLabel = "Voir mes séances",
+                            onAction = onOpenSessions,
+                        )
+                    }
                     state.suggestions.isNotEmpty() -> SuggestionCarousel(
                         state = state,
                         onStart = onStartWorkout,

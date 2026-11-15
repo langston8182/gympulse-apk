@@ -164,4 +164,46 @@ class WorkoutPersistenceTest {
         sessions.saveSession(sessions.getSession(a)!!.copy(name = "A2"))
         assertEquals(listOf("C", "A2", "B"), sessions.observeSessions().first().map { it.name })
     }
+
+    @Test
+    fun customisingALibraryExerciseReplacesItInSessionsAndHidesTheOriginal() = runBlocking {
+        val libraryId = db.exerciseDao().insert(
+            com.gympulse.app.data.local.entity.ExerciseEntity(
+                name = "Curl marteau", imageUri = null, notes = "", type = ExerciseType.REPETITIONS,
+                muscleGroups = emptyList(), equipment = emptyList(), loadMode = LoadMode.TOTAL, createdAt = 1,
+                remoteRef = "hammer_curl", isLibrary = true,
+            )
+        )
+        val library = exercises.getExercise(libraryId)!!
+        assertEquals("hammer_curl", library.libraryKey)
+        val sessionId = sessions.saveSession(
+            WorkoutSession(
+                name = "Bras",
+                exercises = listOf(SessionExercise(exercise = library, order = 0, sets = listOf(SetTarget(10, 12.0)), restDurationSeconds = 60)),
+            ),
+        )
+
+        val copyId = exercises.saveExercise(library.copy(id = 0, isLibrary = false, libraryKey = null, basedOnKey = "hammer_curl", name = "Curl marteau perso"))
+
+        assertEquals(listOf(copyId), exercises.observeExercises().first().map { it.id })
+        assertEquals(copyId, sessions.getSession(sessionId)!!.exercises.single().exerciseId)
+
+        // Deleting the copy brings the original back.
+        exercises.deleteExercise(copyId)
+        assertEquals(listOf(libraryId), exercises.observeExercises().first().map { it.id })
+    }
+
+    @Test
+    fun aSessionMovedToTheEndComesLastAndTheOthersKeepTheirOrder() = runBlocking {
+        val a = sessions.saveSession(WorkoutSession(name = "A"))
+        sessions.saveSession(WorkoutSession(name = "B"))
+        sessions.saveSession(WorkoutSession(name = "C"))
+
+        sessions.moveSessionToEnd(a)
+        assertEquals(listOf("B", "C", "A"), sessions.observeSessions().first().map { it.name })
+
+        // Moving the one that is already last changes nothing.
+        sessions.moveSessionToEnd(a)
+        assertEquals(listOf("B", "C", "A"), sessions.observeSessions().first().map { it.name })
+    }
 }

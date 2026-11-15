@@ -564,7 +564,7 @@ private fun ExercisePickerSheet(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<List<Exercise>>(emptyList()) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), sheetGesturesEnabled = false) {
         Column(Modifier.fillMaxHeight(0.92f)) {
             Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Ajouter des exercices", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))

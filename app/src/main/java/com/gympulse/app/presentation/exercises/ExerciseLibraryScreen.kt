@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.gympulse.app.core.designsystem.components.trainingSplitAccent
 import com.gympulse.app.domain.model.TrainingSplit
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -169,10 +170,22 @@ private fun ExerciseFilters(state: ExerciseLibraryState, viewModel: ExerciseLibr
             }
             items(TrainingSplit.entries, key = { it.name }) { split ->
                 val selected = state.filter.split == split
+                val accent = trainingSplitAccent(split.name.lowercase())
                 FilterChip(
                     selected = selected,
                     onClick = { viewModel.setSplit(if (selected) null else split) },
                     label = { Text(split.label) },
+                    colors = if (accent == null) {
+                        FilterChipDefaults.filterChipColors()
+                    } else {
+                        FilterChipDefaults.filterChipColors(
+                            labelColor = accent,
+                            selectedContainerColor = accent.copy(alpha = 0.24f),
+                            selectedLabelColor = accent,
+                        )
+                    },
+                    border = accent?.let { FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = it.copy(alpha = 0.5f), selectedBorderColor = it) }
+                        ?: FilterChipDefaults.filterChipBorder(enabled = true, selected = selected),
                 )
             }
         }

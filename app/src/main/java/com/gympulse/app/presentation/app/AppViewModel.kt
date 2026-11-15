@@ -76,8 +76,14 @@ class AppViewModel @Inject constructor(
             val name = accountManager.displayName.value
             if (name != null && preferencesRepository.preferences.first().userName.isBlank()) preferencesRepository.setUserName(name)
         } }
-        viewModelScope.launch { locationRepository.refreshDetection() }
     }
+
+    /** The app came to the foreground (or the location permission was just granted): detect where the user is. */
+    fun onAppOpened() {
+        viewModelScope.launch { locationRepository.detectOnAppOpen() }
+    }
+
+    fun hasLocationPermission() = locationRepository.hasLocationPermission()
 
     fun now(): Long = workoutManager.now()
 

@@ -31,14 +31,16 @@ modifications sont mises en file d'attente puis synchronisées avec l'API GymPul
 | Domaine | Ce qui est disponible |
 |---|---|
 | **Accueil** | Séance suggérée du jour (suite du programme, lieu, matériel) avec bouton « Démarrer l'entraînement », séance en cours, dernière séance, objectif hebdomadaire, durée et volume de la semaine (comparés à la semaine précédente), évolution du volume sur 7 j / 30 j / 3 mois / 6 mois / 1 an / tout, records récents, fréquence, progression des principaux exercices. |
-| **Exercices** | Bibliothèque (35 exercices fournis), recherche insensible aux accents, filtres par groupe musculaire, matériel et type. Création, modification et suppression, avec deux types : répétitions (charge × reps) ou durée. Photo depuis la galerie (copiée et redimensionnée dans le stockage privé) ou illustration prédéfinie. Convention de charge « totale » ou « par haltère ». |
-| **Séances** | Création, modification, duplication et suppression. Objectif (hypertrophie, force-hypertrophie, force, endurance, personnalisé), lieux compatibles, exercices ordonnés par glisser-déposer, objectifs par série (reps, charge, durée), repos par exercice **et** surchargeable par série, notes spécifiques. Valeurs par défaut selon l'objectif (hypertrophie 3 × 12, repos 1 min 30 ; force-hypertrophie 4 × 8, repos 1 min 30 ; force 4 × 5, repos 3 min) ; dernières charges proposées automatiquement. Favoris. Ordre des séances choisi par l'utilisateur (« Réorganiser mes séances », par glisser-déposer), synchronisé et repris dans le carrousel de l'accueil. |
+| **Exercices** | Bibliothèque (55 exercices fournis par l'API, avec un pictogramme dessiné par exercice), recherche insensible aux accents, filtres Push / Pull / Legs, matériel et type. Création, modification et suppression, avec deux types : répétitions (charge × reps) ou durée. Photo depuis la galerie (copiée et redimensionnée dans le stockage privé) ou illustration prédéfinie. Convention de charge « totale » ou « par haltère ». |
+| **Séances** | Création, modification, duplication et suppression. Objectif (hypertrophie, force-hypertrophie, force, endurance, personnalisé), lieux compatibles, exercices ordonnés par glisser-déposer, objectifs par série (reps, charge, durée), repos par exercice **et** surchargeable par série, notes spécifiques. Valeurs par défaut selon l'objectif (hypertrophie 3 × 12, repos 1 min 30 ; force-hypertrophie 4 × 8, repos 1 min 30 ; force 4 × 5, repos 3 min) ; dernières charges proposées automatiquement. Favoris. La liste « Mes séances » est **groupée par lieu** (lieu actuel en premier, puis les autres, puis « Sans lieu » ; une séance liée à plusieurs lieux apparaît dans chacun). Ordre des séances choisi par l'utilisateur (« Réorganiser mes séances », par glisser-déposer, **lieu par lieu**), synchronisé et repris dans le carrousel de l'accueil. **Rotation** : terminer une séance l'envoie en fin d'ordre (pas quand on l'abandonne), si bien que la suivante passe en tête du carrousel ; l'ordre se règle à la main à tout moment. |
 | **Programmes** | Regroupent des séances réutilisées sans duplication, avec réordonnancement par glisser-déposer, lieux compatibles et « prochaine séance » du cycle. |
+| **Export** | Export CSV (une ligne par série réalisée) de tout l'historique (onglet Progression → Historique → « Exporter ») ou d'une seule séance (icône de partage du détail), partageable par email ou toute autre application via le menu de partage Android. |
 | **Mode entraînement** | Chronomètre global, exercice et série courants (n / total), objectif, charge de la dernière séance comparable, progression globale, exercices précédent et suivant. Steppers géants pour les reps et la charge, et gros bouton « Terminer la série ». Le repos démarre automatiquement (+15 s, +30 s, « Passer »), avec le prochain effort affiché. Chronomètre ou compte à rebours pour les exercices en durée. Pause et reprise, retour sur une série (correction par appui long), passer un exercice, ajouter une série, réorganiser les exercices restants, terminer, abandonner (avec confirmation). Chaque action est sauvegardée immédiatement. |
 | **Fin de séance** | Récapitulatif : durée, exercices, séries, volume, comparaison avec la séance précédente, nouveaux records, répartition, notes, puis « Terminer et enregistrer ». |
 | **Arrière-plan** | Service de premier plan avec notification en direct (chronomètre, compte à rebours du repos, actions *Passer* / *+30 s* / *Pause*). Retour haptique et son en fin de repos, même écran verrouillé. Reprise proposée d'une séance interrompue après fermeture de l'app ou redémarrage. |
 | **Progression** | Vue d'ensemble (KPI et tendances, graphiques interactifs, répartition musculaire, records), historique groupé par mois, détail d'une séance, comparaison de deux séances, statistiques par exercice (1RM estimé, charge max, charge à reps égales, volume, reps, records par nombre de répétitions, comparaison de périodes). |
-| **Lieux** | Maison, salle, travail, autres : position GPS, rayon, matériel disponible, séances et programmes associés. Détection ponctuelle au lancement et à l'ouverture des séances, choix manuel à tout moment. |
+| **Lieux** | Maison, salle, travail, autres : adresse (recherche d'adresse), carte OpenStreetMap (toucher pour placer le lieu), position GPS, rayon, matériel disponible, séances et programmes associés. Détection ponctuelle au lancement et à l'ouverture des séances, choix manuel à tout moment. Détection : à chaque ouverture de l'app (et une fois la permission accordée, demandée juste après l'onboarding), la position est lue ponctuellement ; si elle correspond à un lieu, celui-ci remplace un choix manuel précédent (sans correspondance, le choix manuel est conservé). Règle de suggestion : avec un lieu sélectionné, l'accueil ne propose que les séances associées à ce lieu ou celles qui ne sont liées à aucun lieu (si le matériel convient) ; une séance réservée à un autre lieu n'est jamais proposée. |
+| **Aide** | Tutoriel intégré (Profil → Aide) : 8 sujets repliables (démarrer, séances, exercices, faire une séance, progression, lieux, compte et synchronisation, réglages). Le texte est dans `presentation/help/HelpScreen.kt`, à tenir à jour quand une fonctionnalité change. |
 | **Profil et paramètres** | Thème sombre (par défaut), clair ou système, couleurs dynamiques Material You, kg ou lb, repos par défaut, son, vibrations, écran allumé pendant la séance, objectif hebdomadaire, gestion des données de démonstration. |
 | **Première utilisation** | Onboarding en 4 écrans : prénom, unité, données de démonstration (activées par défaut). |
 
@@ -184,8 +186,7 @@ après un redémarrage.
     Cognito sont supprimés définitivement, puis le téléphone est effacé (exigé par Google Play).
   - *En-tête `x-user-id`* (builds **debug** par défaut, preprod uniquement) : `DevUserHeaderAuth`, voir plus bas.
 
-  Pool et client Cognito : `COGNITO_DOMAIN` et `COGNITO_CLIENT_ID` dans `app/build.gradle.kts` (preprod renseignés ;
-  **prod à renseigner** : sans eux, une build release affiche « La connexion n'est pas encore configurée »).
+  Pool et client Cognito : `COGNITO_DOMAIN` et `COGNITO_CLIENT_ID` dans `app/build.gradle.kts` (preprod en debug, prod en release).
   Côté Cognito, le client doit autoriser l'URL de rappel `gympulse://auth/callback` et l'URL de déconnexion
   `gympulse://auth/signout`, le fournisseur Google et le flux « Authorization code grant ».
 - **Identité en debug (retrouver ses données).** Sur la preprod il n'y a pas de compte : chaque installation a son
@@ -210,7 +211,8 @@ après un redémarrage.
   localement ce qui a disparu du serveur. Le tout se déclenche au lancement, après chaque modification et via
   « Synchroniser maintenant » (Réglages).
 - **Bibliothèque d'exercices** : fournie par le serveur, en lecture seule. Modifier un exercice de la bibliothèque crée
-  votre propre copie.
+  votre propre copie (`basedOn`) : l'original est alors masqué et remplacé par la copie dans vos séances ; supprimer la
+  copie fait réapparaître l'original.
 - **Photos personnelles** : l'API n'a pas d'endpoint d'upload, elles restent sur l'appareil (seules les illustrations
   prédéfinies sont synchronisées).
 - **Démo** : générée par le serveur (`POST /demo`), puis récupérée. Le premier lancement a besoin du réseau pour la
@@ -282,8 +284,9 @@ Toutes les statistiques sont **calculées à partir de l'historique réel** enre
 | `ComponentsUiTest` (Compose) | Panneau de repos, stepper, carte de séance |
 | `ChartAxisTest` | Graduations « rondes » des graphiques (entières pour les comptes) |
 
-`MainJourneyTest` (androidTest) couvre le parcours complet sur appareil : onboarding, séance suggérée, série, repos,
-fin et enregistrement.
+`MainJourneyTest` (androidTest) couvre le parcours complet sur appareil, contre la preprod : onboarding, séance suggérée,
+série, repos, fin et enregistrement. Il utilise un utilisateur de test dédié via l'en-tête `x-user-id` : lancez-le avec
+`gympulse.useCognito=false` dans `local.properties` (sinon l'écran de connexion Google s'affiche).
 
 État vérifié pour cette version :
 
@@ -292,6 +295,59 @@ fin et enregistrement.
 - `assembleRelease` avec R8 réussi (APK d'environ 2,5 Mo) ;
 - lint sans erreur. Les 2 avertissements restants sont volontaires : la cible API 36 (voir les choix techniques) et
   le dossier `mipmap-anydpi-v26`.
+
+## Build de production
+
+1. **Clé de signature** (une seule fois, à sauvegarder hors du dépôt, par exemple dans un gestionnaire de mots de passe) :
+   ```bash
+   keytool -genkeypair -v -keystore ~/gympulse-release.jks -alias gympulse -keyalg RSA -keysize 4096 -validity 10000
+   ```
+   Perdre cette clé empêche de publier des mises à jour (hors *Play App Signing*, recommandé).
+2. **Renseigner** dans `local.properties` (non versionné) :
+   ```properties
+   gympulse.release.storeFile=/Users/vous/gympulse-release.jks
+   gympulse.release.storePassword=...
+   gympulse.release.keyAlias=gympulse
+   gympulse.release.keyPassword=...
+   ```
+3. **Construire** : `./gradlew :app:bundleRelease` (bundle `.aab` pour le Play Store, dans
+   `app/build/outputs/bundle/release/`) ou `./gradlew :app:assembleRelease` (APK signé, pour un test sur téléphone).
+   Sans ces propriétés, la build release reste produite mais **non signée**.
+4. La release utilise l'API de prod et le pool Cognito de prod ; incrémenter `versionCode` (et `versionName`) à chaque publication.
+
+### Mettre à jour une application déjà installée (prod)
+
+Dans cet ordre :
+
+1. **Déployer l'API d'abord** (`gympulse-api`) via son pipeline : `git push` sur `main` → déploiement automatique en
+   preprod → **approuver** l'étape « ApproveProd » dans AWS CodePipeline → déploiement en prod. (`npm run deploy:prod`
+   existe aussi, mais c'est un déploiement manuel de secours qui contourne le pipeline.)
+   Vérifier : `curl -i https://gympulse-api.cyrilmarchive.com/v1/health` (200) et
+   `curl -i https://gympulse-api.cyrilmarchive.com/v1/sessions` (401 sans jeton). Les nouveaux champs de l'API ont des valeurs
+   par défaut : aucune migration de la base MongoDB n'est nécessaire. Une app plus récente que l'API peut voir certains
+   champs refusés (par exemple un nouvel objectif de séance), d'où cet ordre.
+2. **`versionCode` / `versionName`** (`app/build.gradle.kts`) : pour une installation personnelle avec `adb install -r`,
+   inutile de les changer, même avec un `versionCode` identique. Android refuse seulement un `versionCode` **inférieur**
+   à celui installé. Les augmenter reste utile pour repérer la version installée, et c'est **obligatoire** pour une
+   mise à jour publiée sur le Play Store.
+3. **Construire un APK signé avec la même clé** que la première installation (à refaire après **chaque** modification du
+   code : l'APK installé sur le téléphone ne se met pas à jour tout seul) :
+   ```bash
+   cd ~/Documents/Projets/gympulse/gympulse-apk
+   export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"   # nécessaire dans un terminal
+   ./gradlew :app:assembleRelease
+   ls app/build/outputs/apk/release/     # doit contenir app-release.apk (et pas seulement app-release-unsigned.apk)
+   ```
+4. **Installer par-dessus** (données et connexion conservées) :
+   ```bash
+   adb devices                                   # relever le numéro de série du téléphone
+   adb -s <serial> install -r app/build/outputs/apk/release/app-release.apk
+   ```
+   Avec plusieurs appareils connectés (téléphone et émulateur), `-s <serial>` est obligatoire. L'erreur
+   `INSTALL_FAILED_UPDATE_INCOMPATIBLE` signifie que la signature diffère (autre clé, ou version debug installée) :
+   désinstaller d'abord (`adb -s <serial> uninstall com.gympulse.app`) ; les données reviennent via le compte.
+5. Au premier lancement, la base locale est migrée automatiquement ; « Réglages → Synchroniser maintenant » récupère les
+   nouveaux exercices de la bibliothèque.
 
 ## Choix techniques
 

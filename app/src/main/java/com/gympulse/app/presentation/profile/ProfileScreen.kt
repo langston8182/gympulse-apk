@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Place
@@ -139,6 +140,7 @@ fun ProfileScreen(
     onOpenLocations: () -> Unit,
     onOpenEquipment: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenHelp: () -> Unit,
     onOpenProgress: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
@@ -224,6 +226,7 @@ fun ProfileScreen(
                 NavRow("Matériel", "Équipement disponible par lieu", Icons.Rounded.FitnessCenter, onOpenEquipment)
                 NavRow("Progression", "Statistiques et historique", Icons.Rounded.Insights, onOpenProgress)
                 NavRow("Paramètres", "Thème, unités, sons, données", Icons.Rounded.Settings, onOpenSettings)
+                NavRow("Aide", "Tutoriel : prendre en main GymPulse", Icons.AutoMirrored.Rounded.HelpOutline, onOpenHelp)
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {

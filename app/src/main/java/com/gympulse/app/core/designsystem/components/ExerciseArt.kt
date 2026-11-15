@@ -106,10 +106,41 @@ private object Arts {
             listOf(l(46, 29, 28, 31, 18, 34), l(54, 29, 72, 31, 82, 34)),
             db(16, 34, vertical = true), db(84, 34, vertical = true),
         ),
+        "rear_fly_db" to art(
+            "pull", pt(50, 30),
+            listOf(l(50, 38, 50, 62), l(50, 62, 42, 88), l(50, 62, 58, 88), l(47, 40, 30, 46, 18, 58), l(53, 40, 70, 46, 82, 58)),
+            db(16, 60, vertical = true), db(84, 60, vertical = true),
+        ),
+        "pullover_db" to lying("pull", l(30, 62, 24, 38, 10, 46), db(10, 48, vertical = true)),
         "face_pull" to art(
             "pull", pt(50, 17),
             listOf(l(50, 26, 50, 54), l(50, 54, 50, 72, 52, 88), l(50, 30, 40, 34, 30, 22)),
             pulley(10, 18), cable(10, 18, 30, 22),
+        ),
+        "butterfly" to art(
+            "push", pt(50, 24),
+            listOf(l(50, 34, 50, 62), l(50, 62, 38, 66, 38, 88), l(50, 62, 62, 66, 62, 88), l(46, 40, 28, 46, 34, 58), l(54, 40, 72, 46, 66, 58)),
+            bench(24, 36, 24, 62, legs = false), bench(76, 36, 76, 62, legs = false), bench(40, 70, 60, 70),
+        ),
+        "chest_press" to art(
+            "push", pt(40, 26),
+            listOf(l(40, 36, 40, 64), l(40, 64, 62, 66, 62, 88), l(40, 42, 58, 44, 74, 44)),
+            bench(30, 30, 30, 68, legs = false), bench(30, 70, 68, 70), bench(76, 34, 76, 54, legs = false),
+        ),
+        "triceps_kickback" to art(
+            "push", pt(22, 34),
+            listOf(l(30, 40, 62, 48), l(62, 48, 58, 68, 60, 88), l(62, 48, 74, 66, 76, 88), l(34, 42, 32, 64), l(38, 44, 52, 50, 78, 50)),
+            bench(18, 68, 46, 68), db(80, 50, vertical = true),
+        ),
+        "triceps_kickback_cable" to art(
+            "push", pt(22, 34),
+            listOf(l(30, 40, 62, 48), l(62, 48, 58, 68, 60, 88), l(62, 48, 74, 66, 76, 88), l(34, 42, 32, 64), l(38, 44, 52, 50, 74, 50)),
+            bench(18, 68, 46, 68), pulley(88, 84), cable(88, 84, 74, 50),
+        ),
+        "overhead_triceps_ext_db" to art(
+            "push", pt(50, 30),
+            listOf(l(50, 38, 50, 62), l(50, 62, 42, 88), l(50, 62, 58, 88), l(46, 40, 46, 16), l(54, 40, 54, 16)),
+            db(50, 12),
         ),
         "dips" to art(
             "push", pt(52, 22),
@@ -135,6 +166,11 @@ private object Arts {
             "pull", pt(58, 22),
             listOf(l(58, 34, 58, 64), l(58, 64, 40, 62, 28, 66), l(58, 36, 66, 50, 40, 50)),
             cable(8, 50, 40, 50), pulley(8, 50), bench(52, 72, 70, 72),
+        ),
+        "machine_row_unilateral" to art(
+            "pull", pt(46, 24),
+            listOf(l(46, 34, 46, 62), l(46, 62, 62, 66, 62, 88), l(50, 40, 64, 52, 40, 54), l(46, 40, 56, 44)),
+            bench(36, 70, 66, 70), bench(34, 32, 34, 66, legs = false), bench(78, 44, 78, 60, legs = false), cable(40, 54, 78, 52),
         ),
         "row_bb" to art(
             "pull", pt(24, 30),
@@ -184,6 +220,11 @@ private object Arts {
             listOf(l(50, 28, 50, 54), l(50, 54, 64, 66, 66, 88), l(50, 54, 40, 76, 26, 86), l(50, 32, 50, 52)),
             db(50, 56),
         ),
+        "leg_extension" to art(
+            "legs", pt(36, 26),
+            listOf(l(38, 36, 38, 64), l(38, 64, 58, 66), l(58, 66, 80, 56), l(40, 44, 46, 56)),
+            bench(28, 30, 28, 66, legs = false), bench(34, 70, 62, 70), bench(70, 46, 70, 66, legs = false),
+        ),
         "leg_curl" to art(
             "legs", pt(14, 56),
             listOf(l(22, 60, 50, 60), l(50, 60, 74, 60, 68, 36)),
@@ -198,6 +239,46 @@ private object Arts {
             "legs", pt(50, 16),
             listOf(l(50, 26, 50, 52), l(50, 52, 50, 76, 56, 84)),
             bar(42, 26, 60, 26), bench(44, 88, 66, 88),
+        ),
+        "crunch" to art(
+            "core", pt(33, 54),
+            listOf(l(60, 80, 42, 64), l(60, 80, 74, 60, 86, 80), l(44, 62, 36, 56)),
+            bench(16, 86, 90, 86, legs = false),
+        ),
+        "crunch_cable" to art(
+            "core", pt(46, 34),
+            listOf(l(50, 44, 54, 66), l(54, 66, 60, 86), l(48, 46, 44, 38)),
+            pulley(50, 6), cable(50, 6, 44, 38), bench(40, 88, 72, 88, legs = false),
+        ),
+        "crunch_machine" to art(
+            "core", pt(44, 30),
+            listOf(l(46, 40, 52, 64), l(52, 64, 70, 66, 70, 88), l(48, 46, 58, 50)),
+            bench(38, 36, 38, 62, legs = false), bench(44, 70, 74, 70), bench(62, 40, 62, 56, legs = false),
+        ),
+        "leg_raise_lying" to art(
+            "core", pt(14, 80),
+            listOf(l(22, 82, 52, 82), l(52, 82, 78, 52), l(24, 84, 40, 84)),
+            bench(10, 86, 60, 86, legs = false),
+        ),
+        "bicycle_crunch" to art(
+            "core", pt(34, 54),
+            listOf(l(56, 80, 40, 64), l(56, 80, 84, 70), l(56, 80, 72, 60, 64, 68), l(42, 62, 36, 56)),
+            bench(16, 86, 90, 86, legs = false),
+        ),
+        "russian_twist" to art(
+            "core", pt(42, 46),
+            listOf(l(56, 78, 44, 54), l(56, 78, 76, 62, 86, 78), l(46, 58, 66, 58)),
+            db(68, 58), bench(30, 86, 90, 86, legs = false),
+        ),
+        "woodchopper_cable" to standingFront(
+            "core",
+            listOf(l(48, 38, 58, 50, 68, 62), l(52, 38, 60, 52, 68, 62)),
+            pulley(10, 8), cable(10, 8, 68, 62),
+        ),
+        "side_bend_db" to art(
+            "core", pt(44, 20),
+            listOf(l(48, 28, 52, 56), l(52, 56, 46, 88), l(52, 56, 60, 88), l(48, 32, 40, 56)),
+            db(40, 60, vertical = true),
         ),
         "hanging_leg_raise" to art(
             "core", pt(44, 20),
@@ -233,6 +314,9 @@ private object Arts {
         ),
     )
 }
+
+/** Accent colour of a training split (`push`, `pull`, `legs`), or null for the other ones. */
+fun trainingSplitAccent(key: String): Color? = TrainingSplitColors[key]?.last()
 
 object ExerciseArt {
     /** Colour family (a key of [ExerciseImagePresets]) of the drawing referenced by [uri], if any. */

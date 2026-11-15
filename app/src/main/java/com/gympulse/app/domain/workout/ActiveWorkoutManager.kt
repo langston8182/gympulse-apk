@@ -126,6 +126,8 @@ class ActiveWorkoutManager @Inject constructor(
     /** Completes and saves the workout. Returns its id, or null when no workout was active. */
     suspend fun finish(notes: String?): Long? {
         val finished = mutateNow { execution, now -> WorkoutEngine.finish(execution, now, notes) } ?: return null
+        // The session just performed goes to the end of the order: the next one comes first on the home screen.
+        finished.sessionId?.let { sessionRepository.moveSessionToEnd(it) }
         return finished.id
     }
 

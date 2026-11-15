@@ -6,3 +6,7 @@
 -keep,includedescriptorclasses class com.gympulse.app.**$$serializer { *; }
 -keepclassmembers class com.gympulse.app.** { *** Companion; }
 -keepclasseswithmembers class com.gympulse.app.** { kotlinx.serialization.KSerializer serializer(...); }
+
+# Retrofit and Kotlin coroutines (suspend functions) rely on generic signatures at runtime
+-keepattributes Signature, Exceptions
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation

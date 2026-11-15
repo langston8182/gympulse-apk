@@ -52,6 +52,9 @@ interface ExerciseDao {
     @Query("DELETE FROM exercises WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("SELECT * FROM exercises WHERE remoteRef = :ref AND isLibrary = 1")
+    suspend fun libraryByKey(ref: String): ExerciseEntity?
+
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun count(): Int
 
@@ -117,6 +120,12 @@ interface SessionDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertLocations(refs: List<SessionLocationCrossRef>)
+
+    @Query("SELECT DISTINCT sessionId FROM session_exercises WHERE exerciseId = :exerciseId")
+    suspend fun sessionIdsUsingExercise(exerciseId: Long): List<Long>
+
+    @Query("UPDATE session_exercises SET exerciseId = :to WHERE exerciseId = :from")
+    suspend fun replaceExercise(from: Long, to: Long)
 
     @Query("SELECT sessionId FROM session_locations WHERE locationId = :locationId")
     suspend fun sessionIdsForLocation(locationId: Long): List<Long>

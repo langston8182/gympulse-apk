@@ -41,6 +41,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class LocationEditRoute(val locationId: Long = 0L)
 @Serializable data object EquipmentRoute
 @Serializable data object SettingsRoute
+@Serializable data object HelpRoute
 
 /** Key used to return a newly created exercise id to the screen that requested it. */
 const val CREATED_EXERCISE_ID_KEY = "created_exercise_id"

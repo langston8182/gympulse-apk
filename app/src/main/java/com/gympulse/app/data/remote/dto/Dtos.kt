@@ -18,6 +18,7 @@ data class ExerciseDto(
     val loadMode: String = "TOTAL",
     val imageUri: String? = null,
     val notes: String = "",
+    val basedOn: String? = null,
     val isDemo: Boolean = false,
 )
 

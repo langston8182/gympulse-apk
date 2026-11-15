@@ -47,7 +47,7 @@ import org.robolectric.annotation.Config
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
-private class FakePreferences : PreferencesRepository {
+internal class FakePreferences : PreferencesRepository {
     private val state = MutableStateFlow(UserPreferences())
     override val preferences = state
     override suspend fun setOnboardingCompleted(completed: Boolean) { state.value = state.value.copy(onboardingCompleted = completed) }

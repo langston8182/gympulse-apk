@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
@@ -64,6 +65,8 @@ class MainJourneyTest {
         runCatching {
             Regex(""""ref"\s*:\s*"([^"]+)"""").findAll(call("GET", "sessions")).forEach { call("DELETE", "sessions/${it.groupValues[1]}") }
             call("DELETE", "workouts/active")
+            // The server keeps the onboarding flag: without this reset, a second run would skip the onboarding.
+            call("PUT", "preferences", """{"onboardingCompleted":false,"userName":""}""")
             Regex(""""ref"\s*:\s*"([^"]+)"""").findAll(call("GET", "workouts?limit=500")).forEach { call("DELETE", "workouts/${it.groupValues[1]}") }
         }
     }
@@ -91,9 +94,13 @@ class MainJourneyTest {
     @Test
     fun onboardingThenCompleteWorkout() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            compose.waitUntilAtLeastOneExists(hasText("Passer"), 30_000)
-            compose.onNodeWithText("Passer").performClick()
-            compose.onNodeWithText("Commencer").performClick()
+            // The sync worker started with the app process may already have restored the onboarding flag of
+            // a previous run (the server keeps it): go through the onboarding only when it is shown.
+            compose.waitUntilAtLeastOneExists(hasText("Passer") or hasText("SÉANCE SUGGÉRÉE AUJOURD'HUI"), 30_000)
+            if (compose.onAllNodesWithText("Passer").fetchSemanticsNodes().isNotEmpty()) {
+                compose.onNodeWithText("Passer").performClick()
+                compose.onNodeWithText("Commencer").performClick()
+            }
 
             compose.waitUntilAtLeastOneExists(hasText("SÉANCE SUGGÉRÉE AUJOURD'HUI"), 120_000)
             compose.onNodeWithText("Démarrer l'entraînement").performClick()

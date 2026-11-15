@@ -333,6 +333,19 @@ fun LocationEditScreen(onBack: () -> Unit, viewModel: LocationEditViewModel = hi
                             else -> Unit
                         }
                         Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Ou touchez la carte pour placer le lieu.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LocationMap(
+                            latitude = form.latitudeValue?.takeIf { !form.latitudeError },
+                            longitude = form.longitudeValue?.takeIf { !form.longitudeError },
+                            radiusMeters = form.radiusMeters,
+                            onPick = viewModel::pickOnMap,
+                        )
+                        Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
                                 value = form.latitude,

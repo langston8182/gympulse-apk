@@ -220,7 +220,7 @@ fun ProgramEditScreen(
 
     if (showPicker) {
         var selected by remember { mutableStateOf(state.form.sessions.map { it.id }.toSet()) }
-        ModalBottomSheet(onDismissRequest = { showPicker = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ModalBottomSheet(onDismissRequest = { showPicker = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), sheetGesturesEnabled = false) {
             Column(Modifier.fillMaxHeight(0.85f)) {
                 Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Séances du programme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
