@@ -66,4 +66,27 @@ object WorkoutCsvExporter {
         val safe = if (value.isNotEmpty() && value[0] in "=+-@\t\r") "'$value" else value
         return if (safe.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + safe.replace("\"", "\"\"") + "\"" else safe
     }
+
+    /** Short readable recap used as the email body next to the CSV attachment. */
+    fun summary(workouts: List<WorkoutExecution>, zone: ZoneId = ZoneId.systemDefault()): String {
+        val sorted = workouts.sortedBy { it.startedAt }
+        val withDetail = sorted.size <= DETAILED_LIMIT
+        return buildString {
+            append("GymPulse : ").append(sorted.size).append(if (sorted.size > 1) " séances" else " séance").append("\n")
+            sorted.forEach { workout ->
+                val date = dateTime.format(Instant.ofEpochMilli(workout.startedAt).atZone(zone))
+                append("\n").append(date).append(" - ").append(workout.sessionName)
+                append(" (").append(workout.durationMs / 60_000).append(" min, ").append(workout.completedSetCount).append(" séries)\n")
+                if (withDetail) {
+                    workout.exercises.filter { it.completedSets.isNotEmpty() }.forEach {
+                        append("  - ").append(it.name).append(" : ").append(it.completedSets.size)
+                            .append(if (it.completedSets.size > 1) " séries" else " série").append("\n")
+                    }
+                }
+            }
+            append("\nLe détail série par série est dans le fichier CSV joint.")
+        }
+    }
+
+    private const val DETAILED_LIMIT = 5
 }

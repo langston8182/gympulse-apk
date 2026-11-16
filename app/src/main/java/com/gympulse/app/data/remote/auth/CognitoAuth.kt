@@ -91,6 +91,8 @@ class CognitoAuth @Inject constructor(
         return mapOf("Authorization" to "Bearer $token")
     }
 
+    override fun userId(): String? = claimOf(state, "sub")
+
     /** Called on a network thread: blocks until the token is valid (refreshing it when needed). */
     private fun freshAccessToken(): String? {
         if (!state.isAuthorized) return null

@@ -46,4 +46,20 @@ class WorkoutCsvExporterTest {
         val rows = WorkoutCsvExporter.toCsv(listOf(workout), ZoneOffset.UTC).trim().split("\r\n").drop(1)
         assertEquals(listOf("A", "B", "A", "B"), rows.map { it.split(",")[6] })
     }
+
+    @Test
+    fun summaryListsSetsPerExercise() {
+        val workout = WorkoutExecution(
+            sessionId = 1, sessionName = "Pecs", startedAt = 0, endedAt = 1_800_000,
+            exercises = listOf(
+                ExecutedExercise(
+                    key = "a", exerciseId = null, name = "Développé", type = ExerciseType.REPETITIONS,
+                    sets = List(3) { ExecutedSet(order = it, actualRepetitions = 8, status = SetStatus.COMPLETED) },
+                ),
+            ),
+        )
+        val text = WorkoutCsvExporter.summary(listOf(workout), ZoneOffset.UTC)
+        assertEquals(true, text.contains("1970-01-01 00:00 - Pecs (30 min, 3 séries)"))
+        assertEquals(true, text.contains("  - Développé : 3 séries"))
+    }
 }

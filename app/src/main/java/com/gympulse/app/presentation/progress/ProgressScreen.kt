@@ -36,7 +36,10 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Share
+import android.widget.Toast
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
@@ -316,6 +319,9 @@ private fun MuscleDistribution(dashboard: DashboardStats) {
     }
 }
 
+private val EXPORT_PERIODS = listOf("Tout l'historique" to null, "30 derniers jours" to 30L, "3 derniers mois" to 90L, "12 derniers mois" to 365L)
+private const val DAY_MS = 86_400_000L
+
 @Composable
 private fun HistoryTab(state: ProgressState, onOpenWorkout: (Long) -> Unit, onCompare: (Long, Long) -> Unit) {
     val unit = LocalWeightUnit.current
@@ -323,6 +329,7 @@ private fun HistoryTab(state: ProgressState, onOpenWorkout: (Long) -> Unit, onCo
     val selected = remember { mutableStateListOf<Long>() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var exportMenu by remember { mutableStateOf(false) }
     val grouped = remember(state.history) {
         state.history.groupBy {
             val date = Instant.ofEpochMilli(it.execution.startedAt).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -342,11 +349,30 @@ private fun HistoryTab(state: ProgressState, onOpenWorkout: (Long) -> Unit, onCo
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    AssistChip(
-                        onClick = { scope.launch { shareWorkoutsCsv(context, state.history.map { it.execution }) } },
-                        label = { Text("Exporter") },
-                        leadingIcon = { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) },
-                    )
+                    Box {
+                        AssistChip(
+                            onClick = { exportMenu = true },
+                            label = { Text("Exporter") },
+                            leadingIcon = { Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)) },
+                        )
+                        DropdownMenu(expanded = exportMenu, onDismissRequest = { exportMenu = false }) {
+                            EXPORT_PERIODS.forEach { (label, days) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        exportMenu = false
+                                        val since = days?.let { System.currentTimeMillis() - it * DAY_MS } ?: Long.MIN_VALUE
+                                        val selection = state.history.map { it.execution }.filter { it.startedAt >= since }
+                                        if (selection.isEmpty()) {
+                                            Toast.makeText(context, "Aucune séance sur cette période", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            scope.launch { shareWorkoutsCsv(context, selection) }
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.width(8.dp))
                     FilterChip(
                         selected = compareMode,

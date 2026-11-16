@@ -63,6 +63,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.gympulse.app.BuildConfig
+import com.gympulse.app.data.remote.auth.AuthProvider
+import androidx.compose.foundation.text.selection.SelectionContainer
 import com.gympulse.app.core.designsystem.components.ConfirmDialog
 import com.gympulse.app.core.designsystem.components.EvoCard
 import com.gympulse.app.core.designsystem.components.EvoTopBar
@@ -109,7 +111,11 @@ class SettingsViewModel @Inject constructor(
     private val accountManager: AccountManager,
     private val database: GymPulseDatabase,
     private val api: GymPulseApi,
+    private val auth: AuthProvider,
 ) : ViewModel() {
+    /** Shown on non-production builds: the id the API stores the data under. */
+    val apiUserId: String? get() = auth.userId()
+
     val accountEmail: StateFlow<String?> = accountManager.email
     val supportsSignOut: Boolean = accountManager.supportsSignOut
 
@@ -349,6 +355,17 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (sync.error == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                 )
+                if (BuildConfig.API_ENV != "prod") {
+                    viewModel.apiUserId?.let { id ->
+                        SelectionContainer {
+                            Text(
+                                "Identifiant API : $id",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
                 if (pending > 0 || failed > 0) {
                     Text(
                         buildString {

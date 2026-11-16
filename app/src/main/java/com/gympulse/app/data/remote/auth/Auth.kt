@@ -12,6 +12,9 @@ import javax.inject.Singleton
 /** Supplies the credentials sent with each API request. */
 interface AuthProvider {
     fun headers(): Map<String, String>
+
+    /** Identifier the API uses to own the data (the JWT `sub`, or the x-user-id header). */
+    fun userId(): String? = null
 }
 
 /**
@@ -30,6 +33,8 @@ class DevUserHeaderAuth @Inject constructor(@param:ApplicationContext context: C
     }
 
     override fun headers(): Map<String, String> = mapOf("x-user-id" to installationId)
+
+    override fun userId(): String = installationId
 
     private companion object {
         const val PREFS = "gympulse_identity"

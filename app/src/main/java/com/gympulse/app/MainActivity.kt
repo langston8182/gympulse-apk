@@ -11,7 +11,10 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -107,17 +110,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** Small always-visible tag shown on non-production builds so they can't be mistaken for the real app. */
+/** Always-visible marker on non-production builds so they can't be mistaken for the real app. */
 @Composable
 private fun EnvironmentBadge(env: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .statusBarsPadding()
-            .padding(top = 2.dp)
-            .clip(RoundedCornerShape(50))
-            .background(ComposeColor(0xFFE65100))
-            .padding(horizontal = 8.dp, vertical = 1.dp),
-    ) {
-        Text(env.uppercase(), color = ComposeColor.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Full-width stripe at the very top: visible whatever the notch or status bar content.
+        Box(Modifier.fillMaxWidth().height(3.dp).background(ComposeColor(0xFFE65100)))
+        Box(
+            Modifier
+                .statusBarsPadding()
+                .padding(top = 2.dp)
+                .clip(RoundedCornerShape(50))
+                .background(ComposeColor(0xFFE65100))
+                .padding(horizontal = 8.dp, vertical = 1.dp),
+        ) {
+            Text(env.uppercase(), color = ComposeColor.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }

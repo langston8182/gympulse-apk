@@ -24,6 +24,7 @@ suspend fun shareWorkoutsCsv(context: Context, workouts: List<WorkoutExecution>)
         type = "text/csv"
         putExtra(Intent.EXTRA_STREAM, uri)
         putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, WorkoutCsvExporter.summary(workouts))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(send, "Partager l'export").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
