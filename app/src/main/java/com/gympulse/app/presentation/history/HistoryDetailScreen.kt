@@ -92,6 +92,8 @@ fun HistoryDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var showCompare by remember { mutableStateOf(false) }
     val execution = state.execution
+    val orderedExercises = remember(execution) { execution?.let { executionExercises(it) }.orEmpty() }
+    val executionOrder = remember(execution) { execution?.let { executionRanks(it) }.orEmpty() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -147,8 +149,8 @@ fun HistoryDetailScreen(
                     }
                 }
                 item(key = "exercises-header") { SectionHeader("Exercices") }
-                items(execution.exercises, key = { it.key }) { exercise ->
-                    ExerciseCard(exercise, unit, onOpen = exercise.exerciseId?.let { id -> { onOpenExercise(id) } })
+                items(orderedExercises, key = { it.key }) { exercise ->
+                    ExerciseCard(exercise, unit, executionOrder[exercise.key].orEmpty(), onOpen = exercise.exerciseId?.let { id -> { onOpenExercise(id) } })
                 }
                 if (execution.notes.isNotBlank()) {
                     item(key = "notes") {
@@ -246,7 +248,7 @@ private fun Totals(execution: WorkoutExecution, unit: WeightUnit) {
 }
 
 @Composable
-private fun ExerciseCard(exercise: ExecutedExercise, unit: WeightUnit, onOpen: (() -> Unit)?) {
+private fun ExerciseCard(exercise: ExecutedExercise, unit: WeightUnit, ranks: Map<Int, Int>, onOpen: (() -> Unit)?) {
     val success = GymPulseTheme.extendedColors.success
     EvoCard(onClick = onOpen, contentPadding = PaddingValues(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,6 +285,13 @@ private fun ExerciseCard(exercise: ExecutedExercise, unit: WeightUnit, onOpen: (
                     color = if (skipped) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
+                if (!skipped) ranks[set.order]?.let {
+                    Text(
+                        "n°$it  ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     "obj. " + SetFormat.executedTarget(set, exercise.type, unit),
                     style = MaterialTheme.typography.bodySmall,
@@ -300,4 +309,18 @@ private fun ExerciseCard(exercise: ExecutedExercise, unit: WeightUnit, onOpen: (
             Text(exercise.notes, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/** Exercises sorted by the time their first set was completed; untouched ones keep their planned order at the end. */
+private fun executionExercises(execution: WorkoutExecution): List<ExecutedExercise> =
+    execution.exercises.sortedBy { exercise -> exercise.sets.mapNotNull { it.completedAt }.minOrNull() ?: Long.MAX_VALUE }
+
+/** For each exercise key, the position (1-based) of each completed set in the whole workout, by completion time. */
+private fun executionRanks(execution: WorkoutExecution): Map<String, Map<Int, Int>> {
+    val completed = execution.exercises.flatMapIndexed { index, exercise ->
+        exercise.sets.filter { it.isCompleted }.map { Triple(index, exercise.key, it) }
+    }.sortedWith(compareBy({ it.third.completedAt ?: Long.MAX_VALUE }, { it.first }, { it.third.order }))
+    val result = mutableMapOf<String, MutableMap<Int, Int>>()
+    completed.forEachIndexed { position, (_, key, set) -> result.getOrPut(key) { mutableMapOf() }[set.order] = position + 1 }
+    return result
 }

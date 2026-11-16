@@ -9,7 +9,22 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -57,11 +72,14 @@ class MainActivity : ComponentActivity() {
             val snackbarHostState = remember { SnackbarHostState() }
             GymPulseTheme(themeMode = state.preferences.themeMode, dynamicColor = state.preferences.dynamicColor) {
                 CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
-                    GymPulseApp(
-                        appViewModel = appViewModel,
-                        openWorkoutRequested = openWorkout,
-                        onOpenWorkoutConsumed = { openWorkoutRequest.value = false },
-                    )
+                    Box(Modifier.fillMaxSize()) {
+                        GymPulseApp(
+                            appViewModel = appViewModel,
+                            openWorkoutRequested = openWorkout,
+                            onOpenWorkoutConsumed = { openWorkoutRequest.value = false },
+                        )
+                        if (BuildConfig.API_ENV != "prod") EnvironmentBadge(BuildConfig.API_ENV, Modifier.align(Alignment.TopCenter))
+                    }
                 }
             }
         }
@@ -86,5 +104,20 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_WORKOUT = "open_workout"
+    }
+}
+
+/** Small always-visible tag shown on non-production builds so they can't be mistaken for the real app. */
+@Composable
+private fun EnvironmentBadge(env: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .statusBarsPadding()
+            .padding(top = 2.dp)
+            .clip(RoundedCornerShape(50))
+            .background(ComposeColor(0xFFE65100))
+            .padding(horizontal = 8.dp, vertical = 1.dp),
+    ) {
+        Text(env.uppercase(), color = ComposeColor.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }

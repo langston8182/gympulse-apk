@@ -9,10 +9,11 @@ import java.time.format.DateTimeFormatter
 /** Flat CSV export, one line per completed set. Weights are always in kg. */
 object WorkoutCsvExporter {
     private val dateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    private val timeOnly = DateTimeFormatter.ofPattern("HH:mm:ss")
     private val fileDate = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
     private val header = listOf(
-        "date", "seance", "lieu", "duree_min", "exercice", "serie", "repetitions",
+        "date", "seance", "lieu", "duree_min", "ordre", "heure", "exercice", "serie", "repetitions",
         "poids_kg", "duree_serie_s", "repos_s", "serie_supplementaire",
     )
 
@@ -22,14 +23,20 @@ object WorkoutCsvExporter {
         workouts.sortedBy { it.startedAt }.forEach { workout ->
             val date = dateTime.format(Instant.ofEpochMilli(workout.startedAt).atZone(zone))
             val minutes = workout.durationMs / 60_000
-            workout.exercises.forEach { exercise ->
-                exercise.sets.filter { it.isCompleted }.forEach { set ->
+            // Execution order: by completion time; sets without a timestamp keep their planned position at the end.
+            val executed = workout.exercises.flatMapIndexed { exerciseIndex, exercise ->
+                exercise.sets.filter { it.isCompleted }.map { Triple(exerciseIndex, exercise, it) }
+            }.sortedWith(compareBy({ it.third.completedAt ?: Long.MAX_VALUE }, { it.first }, { it.third.order }))
+            executed.forEachIndexed { position, (_, exercise, set) ->
+                run {
                     val timed = exercise.type == ExerciseType.DURATION
                     val row = listOf(
                         date,
                         workout.sessionName,
                         workout.locationName.orEmpty(),
                         minutes.toString(),
+                        (position + 1).toString(),
+                        set.completedAt?.let { timeOnly.format(Instant.ofEpochMilli(it).atZone(zone)) }.orEmpty(),
                         exercise.name,
                         (set.order + 1).toString(),
                         if (timed) "" else set.actualRepetitions?.toString().orEmpty(),
