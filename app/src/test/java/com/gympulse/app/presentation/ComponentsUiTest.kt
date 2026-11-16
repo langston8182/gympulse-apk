@@ -17,10 +17,15 @@ import com.gympulse.app.domain.model.WeightUnit
 import com.gympulse.app.domain.workout.WorkoutEngine
 import com.gympulse.app.presentation.common.SessionCard
 import com.gympulse.app.presentation.common.SetFormat
+import com.gympulse.app.domain.workout.WorkoutEvent
 import com.gympulse.app.presentation.workout.RestPanel
+import com.gympulse.app.presentation.workout.rememberRestJustFinished
+import kotlinx.coroutines.flow.MutableSharedFlow
 import com.gympulse.app.presentation.workout.nextEffortLabel
 import com.gympulse.app.testing.TestData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,6 +71,25 @@ class ComponentsUiTest {
         time.longValue = 95_000
         compose.onNodeWithText("Série suivante prête !").assertIsDisplayed()
         compose.onNodeWithText("C'est parti").assertIsDisplayed()
+    }
+
+    @Test
+    fun restFinishedStateResetsWhenANewRestReplacesAFinishedOne() {
+        val events = MutableSharedFlow<WorkoutEvent>(extraBufferCapacity = 4)
+        val rest = mutableStateOf<RestTimer?>(RestTimer(startedAt = 0, endsAt = 90_000, totalSeconds = 90, exerciseKey = "k", setIndex = 0))
+        var finished = false
+        compose.setContent { finished = rememberRestJustFinished(rest.value, events) }
+        compose.waitForIdle()
+        assertFalse(finished)
+
+        events.tryEmit(WorkoutEvent.RestFinished)
+        compose.waitForIdle()
+        assertTrue(finished)
+
+        // Next set completed without acknowledging: the rest is replaced, never null.
+        rest.value = RestTimer(startedAt = 100_000, endsAt = 190_000, totalSeconds = 90, exerciseKey = "k", setIndex = 1)
+        compose.waitForIdle()
+        assertFalse(finished)
     }
 
     @Test

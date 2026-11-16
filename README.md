@@ -53,17 +53,17 @@ Prérequis :
 - Un appareil ou un émulateur **Android 8.0+ (API 26)**.
 
 ```bash
-# Compiler l'APK de debug
-./gradlew assembleDebug
+# Compiler l'APK preprod (installable à côté de la prod : com.gympulse.app.preprod)
+./gradlew assemblePreprodDebug
 
-# Installer sur l'appareil connecté
-./gradlew installDebug
+# Installer la préprod sur l'appareil connecté (la prod : assembleProdRelease)
+./gradlew installPreprodDebug
 
 # Tests unitaires et UI JVM (Robolectric) ; les rapports sont dans app/build/reports/tests/
-./gradlew testDebugUnitTest
+./gradlew testPreprodDebugUnitTest
 
 # Tests instrumentés (appareil ou émulateur requis)
-./gradlew connectedDebugAndroidTest
+./gradlew connectedPreprodDebugAndroidTest
 ```
 
 En ligne de commande, `JAVA_HOME` doit pointer vers un JDK 17 ou plus récent, par exemple
@@ -170,24 +170,37 @@ puis avancée avec `SystemClock.elapsedRealtime()`, qui est monotone et continue
 système ne peut donc pas fausser les chronomètres. Les valeurs persistées restent des millisecondes epoch, interprétables
 après un redémarrage.
 
+## Variantes preprod et prod
+
+| | preprod | prod |
+|---|---|---|
+| Identifiant | `com.gympulse.app.preprod` | `com.gympulse.app` |
+| Nom / icône | « GymPulse préprod », fond orange, pastille PREPROD | « GymPulse » |
+| API et Cognito | preprod | prod |
+| Redirection OAuth | `gympulse-preprod://auth/callback` | `gympulse://auth/callback` |
+
+Les deux s'installent côte à côte, avec leurs propres données. Preprod : `./gradlew installPreprodDebug`. Prod :
+voir « Mettre à jour une application déjà installée ». L'URL de rappel `gympulse-preprod://auth/callback` (et celle de
+déconnexion) doit être ajoutée au client Cognito de preprod pour que la connexion Google y fonctionne.
+
 ## Données, Room et synchronisation API
 
 - **Room** est la source de vérité de l'interface (schéma v2, migration `1→2` dans `data/local/db/Migrations.kt`).
   Les exécutions n'ont **pas de clé étrangère** vers les modèles : c'est ce qui garantit l'historique décrit plus haut.
-- **Environnements** (`BuildConfig.API_BASE_URL`) : *debug* → preprod `https://gympulse-api-preprod.cyrilmarchive.com/v1`,
-  *release* → prod `https://gympulse-api.cyrilmarchive.com/v1`.
+- **Environnements** (`BuildConfig.API_BASE_URL`) : variante *preprod* → preprod `https://gympulse-api-preprod.cyrilmarchive.com/v1`,
+  *prod* → prod `https://gympulse-api.cyrilmarchive.com/v1`.
 - **Authentification.** Deux modes, choisis à la compilation :
-  - *Compte Google via Amazon Cognito* (builds **release**, ou debug avec `gympulse.useCognito=true` dans
+  - *Compte Google via Amazon Cognito* (variante **prod**, ou preprod avec `gympulse.useCognito=true` dans
     `local.properties`) : écran « Continuer avec Google », connexion OAuth (code + PKCE) dans un onglet de navigateur
-    (AppAuth, redirection `gympulse://auth/callback`), jetons stockés chiffrés (Android Keystore) et rafraîchis
+    (AppAuth, redirection `gympulse://auth/callback` en prod, `gympulse-preprod://auth/callback` en preprod), jetons stockés chiffrés (Android Keystore) et rafraîchis
     automatiquement ; l'API reçoit `Authorization: Bearer <jeton d'accès>` (`CognitoAuth`). « Se déconnecter »
     (Réglages → Compte) efface les données du téléphone : elles reviennent à la prochaine connexion.
     « Supprimer mon compte » (même écran) appelle `DELETE /v1/account` : toutes les données du serveur et le compte
     Cognito sont supprimés définitivement, puis le téléphone est effacé (exigé par Google Play).
-  - *En-tête `x-user-id`* (builds **debug** par défaut, preprod uniquement) : `DevUserHeaderAuth`, voir plus bas.
+  - *En-tête `x-user-id`* (variante **preprod** par défaut, preprod uniquement) : `DevUserHeaderAuth`, voir plus bas.
 
-  Pool et client Cognito : `COGNITO_DOMAIN` et `COGNITO_CLIENT_ID` dans `app/build.gradle.kts` (preprod en debug, prod en release).
-  Côté Cognito, le client doit autoriser l'URL de rappel `gympulse://auth/callback` et l'URL de déconnexion
+  Pool et client Cognito : `COGNITO_DOMAIN` et `COGNITO_CLIENT_ID` dans `app/build.gradle.kts` (variantes `preprod` et `prod`).
+  Côté Cognito, chaque client doit autoriser son URL de rappel (`gympulse://auth/callback` en prod, `gympulse-preprod://auth/callback` en preprod) et l'URL de déconnexion
   `gympulse://auth/signout`, le fournisseur Google et le flux « Authorization code grant ».
 - **Identité en debug (retrouver ses données).** Sur la preprod il n'y a pas de compte : chaque installation a son
   propre utilisateur (UUID aléatoire). Téléphone et émulateur ne partagent donc pas leurs données, et désinstaller puis
@@ -201,7 +214,7 @@ après un redémarrage.
   puis *Sync Project* et relancez l'app. Priorité : surcharge des tests, puis `gympulse.devUserId`, puis l'UUID généré.
   Pour reprendre les données d'une installation existante, lisez son identifiant avant de la désinstaller :
   `adb shell run-as com.gympulse.app cat shared_prefs/gympulse_identity.xml`. Cet identifiant n'est pas un secret
-  (quiconque le connaît lit les données) : ne l'utilisez que pour la preprod. Les builds *release* l'ignorent.
+  (quiconque le connaît lit les données) : ne l'utilisez que pour la preprod. La variante *prod* l'ignore.
 - **Écritures.** Chaque modification est écrite dans Room et dans la table `sync_ops` **dans la même transaction**
   (`SyncOutbox`), puis un `SyncWorker` (WorkManager, réseau requis, reprise avec backoff) envoie la file dans l'ordre : un
   exercice avant la séance qui l'utilise, une séance avant le programme. Un 4xx met la modification de côté (« refusée »)
@@ -270,7 +283,7 @@ Toutes les statistiques sont **calculées à partir de l'historique réel** enre
 
 ## Tests
 
-`./gradlew testDebugUnitTest` exécute les tests sur la JVM, Robolectric compris pour Room et l'UI Compose :
+`./gradlew testPreprodDebugUnitTest` exécute les tests sur la JVM, Robolectric compris pour Room et l'UI Compose :
 
 | Suite | Couverture |
 |---|---|
@@ -292,7 +305,7 @@ série, repos, fin et enregistrement. Il utilise un utilisateur de test dédié 
 
 - 73 tests JVM au vert (dont le moteur de synchronisation contre un faux serveur HTTP) ;
 - `MainJourneyTest` au vert sur un émulateur Android 16 (API 36) ;
-- `assembleRelease` avec R8 réussi (APK d'environ 2,5 Mo) ;
+- `assembleProdRelease` avec R8 réussi (APK d'environ 2,5 Mo) ;
 - lint sans erreur. Les 2 avertissements restants sont volontaires : la cible API 36 (voir les choix techniques) et
   le dossier `mipmap-anydpi-v26`.
 
@@ -310,8 +323,8 @@ série, repos, fin et enregistrement. Il utilise un utilisateur de test dédié 
    gympulse.release.keyAlias=gympulse
    gympulse.release.keyPassword=...
    ```
-3. **Construire** : `./gradlew :app:bundleRelease` (bundle `.aab` pour le Play Store, dans
-   `app/build/outputs/bundle/release/`) ou `./gradlew :app:assembleRelease` (APK signé, pour un test sur téléphone).
+3. **Construire** : `./gradlew :app:bundleProdRelease` (bundle `.aab` pour le Play Store, dans
+   `app/build/outputs/bundle/prodRelease/`) ou `./gradlew :app:assembleProdRelease` (APK signé, pour un test sur téléphone).
    Sans ces propriétés, la build release reste produite mais **non signée**.
 4. La release utilise l'API de prod et le pool Cognito de prod ; incrémenter `versionCode` (et `versionName`) à chaque publication.
 
@@ -335,13 +348,13 @@ Dans cet ordre :
    ```bash
    cd ~/Documents/Projets/gympulse/gympulse-apk
    export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"   # nécessaire dans un terminal
-   ./gradlew :app:assembleRelease
-   ls app/build/outputs/apk/release/     # doit contenir app-release.apk (et pas seulement app-release-unsigned.apk)
+   ./gradlew :app:assembleProdRelease
+   ls app/build/outputs/apk/prod/release/     # doit contenir app-prod-release.apk (et pas seulement app-prod-release-unsigned.apk)
    ```
 4. **Installer par-dessus** (données et connexion conservées) :
    ```bash
    adb devices                                   # relever le numéro de série du téléphone
-   adb -s <serial> install -r app/build/outputs/apk/release/app-release.apk
+   adb -s <serial> install -r app/build/outputs/apk/prod/release/app-prod-release.apk
    ```
    Avec plusieurs appareils connectés (téléphone et émulateur), `-s <serial>` est obligatoire. L'erreur
    `INSTALL_FAILED_UPDATE_INCOMPATIBLE` signifie que la signature diffère (autre clé, ou version debug installée) :

@@ -14,7 +14,7 @@ val devUserId: String = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
 }.getProperty("gympulse.devUserId", "").trim()
 
-// Debug builds use the x-user-id header by default; `gympulse.useCognito=true` in local.properties
+// The preprod variant uses the x-user-id header by default; `gympulse.useCognito=true` in local.properties
 // tests the real Google/Cognito login against the preprod pool instead.
 val localProperties: Properties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
@@ -34,10 +34,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 2
-        versionName = "1.0.1"
-
-        // Custom scheme of the Cognito redirect (gympulse://auth/callback), handled by AppAuth.
-        manifestPlaceholders["appAuthRedirectScheme"] = "gympulse"
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -56,26 +53,44 @@ android {
         }
     }
 
-    buildTypes {
-        debug {
-            // Debug builds talk to the preprod API, which accepts the per-installation x-user-id header.
+    flavorDimensions += "env"
+    productFlavors {
+        create("preprod") {
+            dimension = "env"
+            // Installable à côté de la prod : identifiant, nom, icône et schéma de redirection OAuth distincts.
+            applicationIdSuffix = ".preprod"
+            versionNameSuffix = "-preprod"
+            manifestPlaceholders["appLabel"] = "GymPulse préprod"
+            manifestPlaceholders["appAuthRedirectScheme"] = "gympulse-preprod"
+            buildConfigField("String", "COGNITO_REDIRECT_URI", "\"gympulse-preprod://auth/callback\"")
             buildConfigField("String", "API_BASE_URL", "\"https://gympulse-api-preprod.cyrilmarchive.com/v1/\"")
             buildConfigField("String", "API_ENV", "\"preprod\"")
+            // L'en-tête x-user-id n'est accepté que par l'API de preprod.
             buildConfigField("boolean", "USE_DEV_USER_HEADER", (!debugUsesCognito).toString())
             buildConfigField("String", "DEV_USER_ID", "\"$devUserId\"")
-            // Preprod Cognito user pool (public identifiers, not secrets).
+            // Pool Cognito de preprod (identifiants publics, pas des secrets).
             buildConfigField("String", "COGNITO_DOMAIN", "\"eu-west-3auhsvinhh.auth.eu-west-3.amazoncognito.com\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"4kde7q4ski01ie894ataj9coii\"")
         }
-        release {
-            // Production requires a real JWT: the x-user-id header is rejected by the API.
+        create("prod") {
+            dimension = "env"
+            manifestPlaceholders["appLabel"] = "GymPulse"
+            // Redirection OAuth gympulse://auth/callback, gérée par AppAuth.
+            manifestPlaceholders["appAuthRedirectScheme"] = "gympulse"
+            buildConfigField("String", "COGNITO_REDIRECT_URI", "\"gympulse://auth/callback\"")
             buildConfigField("String", "API_BASE_URL", "\"https://gympulse-api.cyrilmarchive.com/v1/\"")
             buildConfigField("String", "API_ENV", "\"prod\"")
+            // La prod exige un vrai JWT : l'en-tête x-user-id est refusé par l'API.
             buildConfigField("boolean", "USE_DEV_USER_HEADER", "false")
             buildConfigField("String", "DEV_USER_ID", "\"\"")
-            // Production Cognito pool (public identifiers, not secrets).
+            // Pool Cognito de prod (identifiants publics, pas des secrets).
             buildConfigField("String", "COGNITO_DOMAIN", "\"eu-west-3ownbhrzcn.auth.eu-west-3.amazoncognito.com\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"7stqfkerbqboff8q2khp4cskr1\"")
+        }
+    }
+
+    buildTypes {
+        release {
             if (releaseStoreFile != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true

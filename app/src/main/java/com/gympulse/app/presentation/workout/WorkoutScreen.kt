@@ -87,7 +87,9 @@ import com.gympulse.app.core.util.label
 import com.gympulse.app.domain.model.ExerciseStatus
 import com.gympulse.app.domain.model.LoadMode
 import com.gympulse.app.domain.model.WorkoutExecution
+import com.gympulse.app.domain.model.RestTimer
 import com.gympulse.app.domain.workout.WorkoutEvent
+import kotlinx.coroutines.flow.Flow
 import com.gympulse.app.presentation.common.SetFormat
 
 @Composable
@@ -124,6 +126,20 @@ private fun KeepScreenOn(enabled: Boolean) {
     }
 }
 
+/**
+ * True once the current rest has finished. It resets for every new rest, including one that directly replaces
+ * a finished rest (next set completed without tapping "C'est parti"), where [rest] never becomes null.
+ */
+@Composable
+internal fun rememberRestJustFinished(rest: RestTimer?, events: Flow<WorkoutEvent>): Boolean {
+    var finished by remember { mutableStateOf(false) }
+    LaunchedEffect(events) {
+        events.collect { event -> if (event == WorkoutEvent.RestFinished) finished = true }
+    }
+    LaunchedEffect(rest?.startedAt) { finished = false }
+    return finished
+}
+
 @Composable
 private fun WorkoutContent(
     execution: WorkoutExecution,
@@ -142,15 +158,7 @@ private fun WorkoutContent(
     var showFinishConfirm by remember { mutableStateOf(false) }
     var showAbandonConfirm by remember { mutableStateOf(false) }
     var editSet by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var restJustFinished by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            if (event == WorkoutEvent.RestFinished) restJustFinished = true
-        }
-    }
-    // A new rest (different start) can replace the previous one without passing through null.
-    LaunchedEffect(execution.rest?.startedAt) { restJustFinished = false }
+    val restJustFinished = rememberRestJustFinished(execution.rest, viewModel.events)
 
     val exercise = execution.currentExercise
     val set = execution.currentSet

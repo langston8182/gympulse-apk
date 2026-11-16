@@ -56,7 +56,7 @@ class CognitoAuth @Inject constructor(
         if (!isConfigured) return null
         val domain = BuildConfig.COGNITO_DOMAIN
         val config = AuthorizationServiceConfiguration(Uri.parse("https://$domain/oauth2/authorize"), Uri.parse("https://$domain/oauth2/token"))
-        val request = AuthorizationRequest.Builder(config, BuildConfig.COGNITO_CLIENT_ID, ResponseTypeValues.CODE, Uri.parse(REDIRECT_URI))
+        val request = AuthorizationRequest.Builder(config, BuildConfig.COGNITO_CLIENT_ID, ResponseTypeValues.CODE, Uri.parse(BuildConfig.COGNITO_REDIRECT_URI))
             .setScope("openid email profile")
             // select_account: Google always offers the account chooser (the hosted login keeps its own browser session).
             // AppAuth rejects "prompt" as a free-form parameter: it has its own setter.
@@ -139,7 +139,6 @@ class CognitoAuth @Inject constructor(
     }.getOrNull()
 
     companion object {
-        const val REDIRECT_URI = "gympulse://auth/callback"
         private const val TAG = "GymPulseAuth"
         private const val TOKEN_TIMEOUT_SECONDS = 20L
         private const val INVALID_GRANT = 2002

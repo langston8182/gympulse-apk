@@ -91,6 +91,19 @@ class WorkoutEngineTest {
     }
 
     @Test
+    fun `completing the next set after a finished rest starts a new distinct rest`() {
+        var execution = WorkoutEngine.completeCurrentSet(start(), 12, 20.0, null, t0)
+        val firstRest = execution.rest!!
+        val later = firstRest.endsAt + 45_000
+        execution = WorkoutEngine.completeCurrentSet(execution, 8, 24.0, null, later)
+        val secondRest = execution.rest!!
+        assertEquals(later, secondRest.startedAt)
+        assertTrue(secondRest.startedAt != firstRest.startedAt)
+        assertFalse(secondRest.isFinished(later))
+        assertEquals(120, execution.exercises[0].sets[0].actualRestSeconds)
+    }
+
+    @Test
     fun `extending rest adds time, and restarts a finished rest`() {
         var execution = WorkoutEngine.completeCurrentSet(start(), 12, 20.0, null, t0)
         execution = WorkoutEngine.extendRest(execution, 30, t0 + 10_000)
