@@ -150,18 +150,23 @@ fun RepeatingIconButton(
                 if (!enabled) return@pointerInput
                 detectTapGestures(
                     onPress = {
-                        haptics.tick()
-                        currentOnClick()
+                        // Nothing fires on touch-down so that a scroll starting on the button changes no value.
+                        var repeated = false
                         repeatJob = scope.launch {
                             delay(450)
+                            repeated = true
                             while (true) {
                                 currentOnClick()
                                 haptics.tick()
                                 delay(90)
                             }
                         }
-                        tryAwaitRelease()
+                        val released = tryAwaitRelease()
                         repeatJob?.cancel()
+                        if (released && !repeated) {
+                            haptics.tick()
+                            currentOnClick()
+                        }
                     },
                 )
             },

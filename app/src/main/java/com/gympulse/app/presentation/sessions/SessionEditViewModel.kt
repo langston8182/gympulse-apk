@@ -166,9 +166,10 @@ class SessionEditViewModel @Inject constructor(
         if (exercises.isEmpty()) return
         viewModelScope.launch {
             val goal = _state.value.form.goal
+            val locationIds = _state.value.form.locationIds
             val unit = _state.value.unit
             val blocks = exercises.map { exercise ->
-                val last = progressRepository.lastPerformance(exercise.id)
+                val last = progressRepository.lastPerformance(exercise.id, preferredSessionId = original?.id, locationIds = locationIds)
                 val (count, reps, rest) = defaultsFor(goal, exercise.type)
                 val sets = List(count) { index ->
                     if (exercise.type == ExerciseType.DURATION) {

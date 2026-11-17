@@ -163,6 +163,7 @@ internal fun RestPanel(
                 Button(
                     onClick = onSkip,
                     modifier = Modifier.weight(1.4f).heightIn(min = 52.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (ready) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = if (ready) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
@@ -170,7 +171,7 @@ internal fun RestPanel(
                 ) {
                     Icon(if (ready) Icons.Rounded.Check else Icons.Rounded.SkipNext, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (ready) "C'est parti" else "Passer")
+                    Text(if (ready) "C'est parti" else "Passer", maxLines = 1, softWrap = false)
                 }
             }
             Spacer(Modifier.height(14.dp))

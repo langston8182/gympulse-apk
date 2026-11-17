@@ -39,6 +39,13 @@ data class SetDraft(
     val durationSeconds: Int = 0,
 )
 
+private data class PreviousKey(
+    val executionId: Long,
+    val sessionId: Long?,
+    val locationId: Long?,
+    val exercises: List<Pair<String, Long?>>,
+)
+
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
     private val manager: ActiveWorkoutManager,
@@ -47,7 +54,6 @@ class WorkoutViewModel @Inject constructor(
     private val serviceController: WorkoutServiceController,
 ) : ViewModel() {
 
-    val execution: StateFlow<WorkoutExecution?> = manager.active
     val restored: StateFlow<Boolean> = manager.restored
     val events: Flow<WorkoutEvent> = manager.events
 
@@ -57,16 +63,26 @@ class WorkoutViewModel @Inject constructor(
     /** Last comparable performance of each exercise of the workout, keyed by exercise snapshot key. */
     val previous: StateFlow<Map<String, ExercisePerformance>> = manager.active
         .filterNotNull()
-        .map { execution -> Triple(execution.id, execution.sessionId, execution.exercises.map { it.key to it.exerciseId }) }
+        .map { execution -> PreviousKey(execution.id, execution.sessionId, execution.locationId, execution.exercises.map { it.key to it.exerciseId }) }
         .distinctUntilChanged()
-        .mapLatest { (executionId, sessionId, exercises) ->
+        .mapLatest { (executionId, sessionId, locationId, exercises) ->
             exercises.mapNotNull { (key, exerciseId) ->
                 exerciseId?.let { id ->
-                    progressRepository.lastPerformance(id, preferredSessionId = sessionId, excludingExecutionId = executionId)?.let { key to it }
+                    progressRepository.lastPerformance(
+                        id,
+                        preferredSessionId = sessionId,
+                        locationIds = setOfNotNull(locationId),
+                        excludingExecutionId = executionId,
+                    )?.let { key to it }
                 }
             }.toMap()
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** The active workout, with the loads of upcoming sets showing what is actually proposed. */
+    val execution: StateFlow<WorkoutExecution?> = kotlinx.coroutines.flow.combine(manager.active, previous) { execution, previous ->
+        execution?.let { withSuggestedTargets(it, previous) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, manager.active.value)
 
     private val _draft = MutableStateFlow(SetDraft())
     val draft: StateFlow<SetDraft> = _draft.asStateFlow()
@@ -125,12 +141,23 @@ class WorkoutViewModel @Inject constructor(
      */
     private fun suggestedWeight(exercise: ExecutedExercise, setIndex: Int, previous: Map<String, ExercisePerformance>): Double? {
         val set = exercise.sets.getOrNull(setIndex) ?: return null
-        set.targetWeightKg?.let { return it }
         val last = previous[exercise.key]
         last?.sets?.getOrNull(setIndex)?.weightKg?.takeIf { it > 0 }?.let { return it }
+        set.targetWeightKg?.let { return it }
         exercise.sets.take(setIndex).lastOrNull { it.isCompleted && it.actualWeightKg != null }?.actualWeightKg?.let { return it }
         return last?.topWeightKg
     }
+
+    private fun withSuggestedTargets(execution: WorkoutExecution, previous: Map<String, ExercisePerformance>): WorkoutExecution =
+        execution.copy(
+            exercises = execution.exercises.map { exercise ->
+                exercise.copy(
+                    sets = exercise.sets.mapIndexed { index, set ->
+                        if (set.isCompleted) set else suggestedWeight(exercise, index, previous)?.let { set.copy(targetWeightKg = it) } ?: set
+                    },
+                )
+            },
+        )
 
     fun weightStep(exercise: ExecutedExercise?, unit: WeightUnit): Double {
         val heavy = exercise?.equipment?.any { it in HEAVY_EQUIPMENT } == true

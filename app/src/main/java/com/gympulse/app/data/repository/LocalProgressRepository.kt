@@ -41,28 +41,34 @@ class LocalProgressRepository @Inject constructor(
             .map { StatsCalculator.exerciseProgress(exerciseId, it) }
             .flowOn(dispatcher)
 
-    override fun observeLastPerformances(): Flow<Map<Long, ExercisePerformance>> =
+    override fun observeLastPerformances(locationIds: Set<Long>): Flow<Map<Long, ExercisePerformance>> =
         workoutRepository.observeHistory()
-            .map { history -> lastPerformances(history) }
+            .map { history -> lastPerformances(history.atLocations(locationIds)) }
             .flowOn(dispatcher)
 
     override suspend fun lastPerformance(
         exerciseId: Long,
         preferredSessionId: Long?,
+        locationIds: Set<Long>,
         excludingExecutionId: Long?,
     ): ExercisePerformance? = withContext(dispatcher) {
         val history = workoutRepository.observeHistory().first()
             .filter { it.id != excludingExecutionId }
+            .atLocations(locationIds)
             .sortedByDescending { it.startedAt }
         fun find(candidates: List<WorkoutExecution>): ExercisePerformance? = candidates.firstNotNullOfOrNull { execution ->
             execution.exercises.firstOrNull { it.exerciseId == exerciseId }?.let { TrainingMath.performance(execution, it) }
         }
-        preferredSessionId?.let { sessionId -> find(history.filter { it.sessionId == sessionId }) } ?: find(history)
+        val sameSession = preferredSessionId?.let { sessionId -> history.filter { it.sessionId == sessionId } }.orEmpty()
+        find(sameSession) ?: find(history)
     }
 
     override suspend fun detectRecords(execution: WorkoutExecution): List<PersonalRecord> = withContext(dispatcher) {
         RecordDetector.detectForWorkout(workoutRepository.observeHistory().first(), execution)
     }
+
+    private fun List<WorkoutExecution>.atLocations(locationIds: Set<Long>): List<WorkoutExecution> =
+        if (locationIds.isEmpty()) this else filter { it.locationId in locationIds }
 
     private fun lastPerformances(history: List<WorkoutExecution>): Map<Long, ExercisePerformance> {
         val result = mutableMapOf<Long, ExercisePerformance>()

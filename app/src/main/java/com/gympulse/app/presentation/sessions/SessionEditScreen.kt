@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -156,6 +157,7 @@ fun SessionEditScreen(
     if (showPicker) {
         ExercisePickerSheet(
             alreadyAdded = state.form.blocks.map { it.exercise.id }.toSet(),
+            locationIds = state.form.locationIds,
             onDismiss = { showPicker = false },
             onConfirm = { exercises ->
                 viewModel.addExercises(exercises)
@@ -557,11 +559,13 @@ private fun ReorderList(state: SessionEditState, onMove: (Int, Int) -> Unit, onD
 @Composable
 private fun ExercisePickerSheet(
     alreadyAdded: Set<Long>,
+    locationIds: Set<Long>,
     onDismiss: () -> Unit,
     onConfirm: (List<Exercise>) -> Unit,
     onCreateExercise: () -> Unit,
     viewModel: ExerciseLibraryViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(locationIds) { viewModel.setLocationScope(locationIds) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<List<Exercise>>(emptyList()) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), sheetGesturesEnabled = false) {

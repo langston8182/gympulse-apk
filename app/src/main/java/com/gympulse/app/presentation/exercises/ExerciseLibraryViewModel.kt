@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -61,10 +62,11 @@ class ExerciseLibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val filter = MutableStateFlow(ExerciseFilter())
+    private val locationScope = MutableStateFlow<Set<Long>>(emptySet())
 
     val state: StateFlow<ExerciseLibraryState> = combine(
         exerciseRepository.observeExercises(),
-        progressRepository.observeLastPerformances().onStart { emit(emptyMap()) },
+        locationScope.flatMapLatest { progressRepository.observeLastPerformances(it).onStart { emit(emptyMap()) } },
         filter,
     ) { exercises, last, filter ->
         val query = filter.query.normalizedForSearch()
@@ -85,6 +87,8 @@ class ExerciseLibraryViewModel @Inject constructor(
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseLibraryState())
 
+    /** Restricts the shown last performances to these places (empty = all). */
+    fun setLocationScope(locationIds: Set<Long>) { locationScope.value = locationIds }
     fun setQuery(query: String) = filter.update { it.copy(query = query) }
     fun setSplit(split: TrainingSplit?) = filter.update { it.copy(split = split) }
     fun setEquipment(equipment: Equipment?) = filter.update { it.copy(equipment = equipment) }

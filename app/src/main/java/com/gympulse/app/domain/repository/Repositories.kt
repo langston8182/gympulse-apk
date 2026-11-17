@@ -66,15 +66,20 @@ interface WorkoutRepository {
 interface ProgressRepository {
     fun observeDashboard(period: StatsPeriod): Flow<DashboardStats>
     fun observeExerciseProgress(exerciseId: Long): Flow<ExerciseProgress>
-    /** Last completed performance of each exercise, keyed by exercise id. */
-    fun observeLastPerformances(): Flow<Map<Long, ExercisePerformance>>
+    /**
+     * Last completed performance of each exercise, keyed by exercise id. A non-empty [locationIds]
+     * restricts it to workouts done at those places, since the equipment differs from one place to another.
+     */
+    fun observeLastPerformances(locationIds: Set<Long> = emptySet()): Flow<Map<Long, ExercisePerformance>>
     /**
      * Last completed performance of an exercise. When [preferredSessionId] is given, a performance
      * done within that same session template is preferred, as it is the most comparable one.
+     * A non-empty [locationIds] restricts the search to workouts done at those places.
      */
     suspend fun lastPerformance(
         exerciseId: Long,
         preferredSessionId: Long? = null,
+        locationIds: Set<Long> = emptySet(),
         excludingExecutionId: Long? = null,
     ): ExercisePerformance?
     suspend fun detectRecords(execution: WorkoutExecution): List<PersonalRecord>
